@@ -129,7 +129,7 @@ USBH_ClassTypeDef  CH340_Class =
 */ 
 
 
-static int ch34x_vendor_read(unsigned char request,
+static USBH_StatusTypeDef ch34x_vendor_read(unsigned char request,
 		unsigned short value,
 		unsigned short index,
 		USBH_HandleTypeDef *phost,
@@ -155,7 +155,7 @@ static int ch34x_vendor_read(unsigned char request,
   return retval;
 }
 
-static int ch34x_vendor_write(unsigned char request,
+static USBH_StatusTypeDef ch34x_vendor_write(unsigned char request,
 		unsigned short value,
 		unsigned short index,
 		USBH_HandleTypeDef *phost,
@@ -782,6 +782,7 @@ static USBH_StatusTypeDef SetLineCoding(USBH_HandleTypeDef *phost, CDC_LineCodin
 	//set_control_lines( phost, control );
 	
 #if 0
+
   phost->Control.setup.b.bmRequestType = USB_H2D | USB_REQ_TYPE_CLASS | \
                               USB_REQ_RECIPIENT_INTERFACE;
   
