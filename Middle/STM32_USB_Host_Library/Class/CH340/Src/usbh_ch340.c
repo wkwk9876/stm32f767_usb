@@ -178,7 +178,7 @@ static int ch34x_vendor_write(unsigned char request,
   return retval;
 }
 
-static int set_control_lines(USBH_HandleTypeDef *phost,
+/*static int set_control_lines(USBH_HandleTypeDef *phost,
 		unsigned char value )
 {
   USBH_StatusTypeDef retval;
@@ -188,7 +188,7 @@ static int set_control_lines(USBH_HandleTypeDef *phost,
   __PRINT_LOG__(__INFO_LEVEL__, "%s - value=%d, retval=%d", __func__, value, retval);
 
   return retval;
-}
+}*/
 
 static int ch34x_get_baud_rate( unsigned int baud_rate,
 		unsigned char *factor, unsigned char *divisor)

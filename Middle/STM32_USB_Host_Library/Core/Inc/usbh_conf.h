@@ -54,7 +54,7 @@
 #include <string.h>
 
 /* Exported types ------------------------------------------------------------*/
-#define USBH_MAX_NUM_ENDPOINTS                2
+#define USBH_MAX_NUM_ENDPOINTS                3
 #define USBH_MAX_NUM_INTERFACES               2
 #define USBH_MAX_NUM_CONFIGURATION            1
 #define USBH_MAX_NUM_SUPPORTED_CLASS          2
