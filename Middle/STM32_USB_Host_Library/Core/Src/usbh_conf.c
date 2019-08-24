@@ -204,7 +204,7 @@ USBH_StatusTypeDef USBH_LL_Init(USBH_HandleTypeDef *phost)
   hhcd.Init.dma_enable = 0;
   hhcd.Init.low_power_enable = 0;
   hhcd.Init.phy_itface = HCD_PHY_EMBEDDED; 
-  hhcd.Init.Sof_enable = 1;
+  hhcd.Init.Sof_enable = 0;
   hhcd.Init.speed = HCD_SPEED_FULL;
   hhcd.Init.vbus_sensing_enable = 0;
   hhcd.Init.lpm_enable = 0;
@@ -383,6 +383,10 @@ USBH_StatusTypeDef USBH_LL_SubmitURB(USBH_HandleTypeDef *phost,
                                      uint16_t length,
                                      uint8_t do_ping)
 {
+
+  if(NULL == phost || NULL == phost->pData || 0 == phost->device.is_connected)
+  	return USBH_FAIL;
+
   HAL_HCD_HC_SubmitRequest(phost->pData,
                            pipe,
                            direction,

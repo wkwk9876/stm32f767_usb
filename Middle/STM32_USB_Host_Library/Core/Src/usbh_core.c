@@ -395,9 +395,13 @@ USBH_StatusTypeDef  USBH_ReEnumerate   (USBH_HandleTypeDef *phost)
 USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
 {
   __IO USBH_StatusTypeDef status = USBH_FAIL;
+  __IO USBH_StatusTypeDef enum_status = USBH_FAIL;
   uint8_t idx = 0;
     
   __PRINT_LOG__(__DEBUG_LEVEL__, "gState: %d\r\n", phost->gState);
+
+  ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_HPRTINT;
+  //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_DISCINT;
   
   switch (phost->gState)
   {
@@ -461,7 +465,7 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     
   case HOST_ENUMERATION:     
     /* Check for enumeration status */  
-    if ( USBH_HandleEnum(phost) == USBH_OK)
+    if ( (enum_status = USBH_HandleEnum(phost)) == USBH_OK)
     { 
       /* The function shall return USBH_OK when full enumeration is complete */
       USBH_UsrLog ("Enumeration done.");
@@ -478,6 +482,12 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
       }
           
     }
+	else if(enum_status == USBH_FAIL)
+	{
+	  USBH_ReEnumerate(phost);
+	  //phost->gState = HOST_IDLE;
+	  //USBH_LL_Disconnect(phost);
+	}
     break;
     
   case HOST_INPUT:
@@ -588,25 +598,31 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     }
     break;       
 
-  case HOST_DEV_DISCONNECTED :
-    
-    DeInitStateMachine(phost);  
-    
+  case HOST_DEV_DISCONNECTED :  
+
     /* Re-Initilaize Host for new Enumeration */
     if(phost->pActiveClass != NULL)
     {
       phost->pActiveClass->DeInit(phost); 
       phost->pActiveClass = NULL;
     }     
+
+	DeInitStateMachine(phost);
+	
     break;
     
   case HOST_ABORT_STATE:
   default :
     break;
   }
+
+  //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_DISCINT;
+  ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_HPRTINT;
+  
  return USBH_OK;  
 }
 
+CTRL_StateTypeDef last_ctrl_status = CTRL_IDLE;
 
 /**
   * @brief  USBH_HandleEnum 
@@ -630,6 +646,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
       phost->Control.pipe_size = phost->device.DevDesc.bMaxPacketSize;
 
       phost->EnumState = ENUM_GET_FULL_DEV_DESC;
+	  last_ctrl_status = CTRL_IDLE;
       
       /* modify control channels configuration for MaxPacket size */
       USBH_OpenPipe (phost,
@@ -652,7 +669,21 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
     }
     else
     {
-      __PRINT_LOG__(__DEBUG_LEVEL__, "USBH_Get_DevDesc failed(%d)\r\n", tmpStatus);
+      if(last_ctrl_status != CTRL_IDLE && last_ctrl_status == phost->Control.state)
+      {
+        last_ctrl_status = CTRL_IDLE;
+		__PRINT_LOG__(__ERR_LEVEL__, "ENUM failed(%d), reset to idle!!!\r\n", phost->Control.state);
+		Status = USBH_FAIL;
+#if (USBH_USE_OS == 1)
+		osMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
+#endif 
+
+      }
+	  else
+	  {
+	    last_ctrl_status = phost->Control.state;
+		__PRINT_LOG__(__ERR_LEVEL__, "USBH_Get_DevDesc failed(%d)\r\n", tmpStatus);
+	  }      
     }
     break;
     
@@ -887,6 +918,8 @@ USBH_StatusTypeDef  USBH_LL_Connect  (USBH_HandleTypeDef *phost)
     {    
       phost->pUser(phost, HOST_USER_CONNECTION);
     }
+
+	USBH_UsrLog("USB Device connected"); 
   } 
   else if(phost->gState == HOST_DEV_WAIT_FOR_ATTACHMENT )
   {
@@ -907,6 +940,15 @@ USBH_StatusTypeDef  USBH_LL_Connect  (USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
 {
+  phost->device.is_connected = 0; 
+  
+  if(phost->pUser != NULL)
+  {    
+    phost->pUser(phost, HOST_USER_DISCONNECTION);
+  }
+  USBH_Delay(1); 
+  USBH_UsrLog("USB Device disconnected");
+
   /*Stop Host */ 
   USBH_LL_Stop(phost);  
   
@@ -914,13 +956,11 @@ USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
   USBH_FreePipe  (phost, phost->Control.pipe_in);
   USBH_FreePipe  (phost, phost->Control.pipe_out);  
    
-  phost->device.is_connected = 0; 
-   
-  if(phost->pUser != NULL)
+  /*if(phost->pUser != NULL)
   {    
     phost->pUser(phost, HOST_USER_DISCONNECTION);
   }
-  USBH_UsrLog("USB Device disconnected"); 
+  USBH_UsrLog("USB Device disconnected"); */
   
   /* Start the low level driver  */
   USBH_LL_Start(phost);

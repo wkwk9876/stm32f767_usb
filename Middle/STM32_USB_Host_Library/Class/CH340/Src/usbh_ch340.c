@@ -138,6 +138,9 @@ static USBH_StatusTypeDef ch34x_vendor_read(unsigned char request,
 {
   USBH_StatusTypeDef retval;
 
+  if(NULL == phost)
+		return USBH_FAIL;
+
   phost->Control.setup.b.bmRequestType = VENDOR_READ_TYPE;
   
   phost->Control.setup.b.bRequest = request;
@@ -163,6 +166,9 @@ static USBH_StatusTypeDef ch34x_vendor_write(unsigned char request,
 		unsigned short len )
 {
   USBH_StatusTypeDef retval;
+
+  if(NULL == phost)
+		return USBH_FAIL;
 
   phost->Control.setup.b.bmRequestType = VENDOR_WRITE_TYPE;
   
@@ -235,11 +241,18 @@ static int ch34x_get_baud_rate( unsigned int baud_rate,
 
 static USBH_StatusTypeDef ch34x_attach( USBH_HandleTypeDef *phost )
 {	
-	CDC_HandleTypeDef *CDC_Handle =  (CDC_HandleTypeDef*) phost->pActiveClass->pData;
+	CDC_HandleTypeDef *CDC_Handle = NULL;
 	char buf[8];
 	USBH_StatusTypeDef status = USBH_BUSY;
 
-	__PRINT_LOG__(__CRITICAL_LEVEL__, "%s attach_state:%d\r\n", __func__, CDC_Handle->attach_state);	
+	if(NULL == phost || NULL == phost->pActiveClass || NULL == phost->pActiveClass->pData)
+		return USBH_FAIL;
+
+	CDC_Handle =  (CDC_HandleTypeDef*) phost->pActiveClass->pData;
+	if(NULL == CDC_Handle)
+		return USBH_FAIL;
+
+	__PRINT_LOG__(__INFO_LEVEL__, "%s attach_state:%d\r\n", __func__, CDC_Handle->attach_state);	
 	switch(CDC_Handle->attach_state)
 	{
 	case CH340_READ_VENDOR_VERSION_STATE:

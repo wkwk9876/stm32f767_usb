@@ -20,6 +20,7 @@ ApplicationTypeDef Appli_state = APPLICATION_IDLE;
 char USBDISKPath[4];            /* USB Host logical drive path */
 osMessageQId AppliEvent;
 char recv_buf[RECV_BUFF_SIZE + 1];
+volatile unsigned char	g_stop_flag = 0;
 
 CDC_LOG_BUFF_STATE log_buf;
 unsigned int rx_total_num = 0;
@@ -113,6 +114,8 @@ static void USBH_UserProcess(USBH_HandleTypeDef * phost, uint8_t id)
     break;
 
   case HOST_USER_DISCONNECTION:
+  	__PRINT_LOG__(__CRITICAL_LEVEL__, "DEBUG : disconnect!\r\n");
+  	g_stop_flag = 1;
     osMessagePut(AppliEvent, APPLICATION_DISCONNECT, 0);
     break;
 
@@ -123,6 +126,7 @@ static void USBH_UserProcess(USBH_HandleTypeDef * phost, uint8_t id)
     break;
 
   case HOST_USER_CONNECTION:
+  	
     osMessagePut(AppliEvent, APPLICATION_START, 0);
 	break;
 
@@ -260,6 +264,7 @@ static void StartThread(void const *argument)
       switch(event.value.v)
       {
       case APPLICATION_DISCONNECT:
+	  	g_stop_flag = 0;
         Appli_state = APPLICATION_DISCONNECT;
         break;
 
@@ -306,8 +311,8 @@ static void StartThread(void const *argument)
   		{  			
             memset(recv_buf, 0, RECV_BUFF_SIZE);
 			USBH_CDC_Receive(&hUSBHost, (unsigned char *)recv_buf, RECV_BUFF_SIZE);
-            //recv_flag = 1;
-	        while(1)
+#if 1            
+	        while(0 == g_stop_flag)
 	        {
               unsigned int len = snprintf(send_buf, 64, "%d: %s", count++, "hello world!\r\n");
 	          USBH_CDC_Transmit(&hUSBHost, (unsigned char *)send_buf, strlen(send_buf));
@@ -315,15 +320,10 @@ static void StartThread(void const *argument)
               tx_total_num += len;
 			  printf("Send(%d)\r\n", tx_total_num);
 			  //__PRINT_LOG__(__CRITICAL_LEVEL__, "Send(%d): %s", tx_total_num, send_buf);
-			  /*if(0 == recv_flag)
-			  {
-			    memset(recv_buf, 0, 64);
-			    USBH_CDC_Receive(&hUSBHost, (unsigned char *)recv_buf, 64);
-				recv_flag = 1;
-			  }*/
 
 			  osDelay(10);			  
 	        }  
+#endif
   		}
 		else
 		{
