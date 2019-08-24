@@ -1,5 +1,8 @@
 Output
 Project/stm32f767_usb_host.si4project/Backup
 Project/stm32f767_usb_host.si4project/cache
+Project/stm32f767_usb_host.si4project/cache/parse
 *.sip_xr
+*.sisc
+Project/stm32f767_usb_host.si4project/cache/parse/Core_cmsis_armcc.h.sisc
 *.sisc
