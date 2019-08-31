@@ -466,7 +466,8 @@ typedef struct _USBH_HandleTypeDef
   osMessageQId          os_event;   
   osThreadId            thread; 
 #endif  
-  
+  void *				app_class;
+  void *				app_data;
 } USBH_HandleTypeDef;
 
 

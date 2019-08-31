@@ -111,7 +111,7 @@ static void CDC_ProcessReception(USBH_HandleTypeDef *phost);
 USBH_ClassTypeDef  CH340_Class = 
 {
   "CH340",
-  0xff,
+  USB_CH340_CLASS,
   USBH_CH340_InterfaceInit,
   USBH_CH340_InterfaceDeInit,
   USBH_CH340_ClassRequest,

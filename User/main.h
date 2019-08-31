@@ -42,7 +42,7 @@
 #include "usbh_core.h"
 #include "usbh_msc.h"
 #include "usbh_ch340.h"
-//#include "usbh_cdc.h"
+#include "usbh_hub.h"
 #include "systemlog.h"
 #include "systemDelay.h"
 
@@ -55,6 +55,16 @@
 /* Exported functions ------------------------------------------------------- */
 
 /* Exported types ------------------------------------------------------------*/
+typedef struct
+{
+	uint8_t              ClassCode; 
+	USBH_StatusTypeDef  (*new_app)        (struct _USBH_HandleTypeDef *phost);
+	USBH_StatusTypeDef  (*start_app)      (struct _USBH_HandleTypeDef *phost);
+	USBH_StatusTypeDef  (*stop_app)       (struct _USBH_HandleTypeDef *phost);
+	USBH_StatusTypeDef  (*delete_app)     (struct _USBH_HandleTypeDef *phost);
+}Usb_Application_Class;
+
+
 typedef enum {
   MSC_DEMO_IDLE = 0,
   MSC_DEMO_WAIT,
@@ -68,7 +78,7 @@ typedef struct _DemoStateMachine {
   __IO uint8_t        select;
 }MSC_DEMO_StateMachine;
 
-typedef enum {
+/*typedef enum {
   APPLICATION_IDLE = 0,
   APPLICATION_START,
   APPLICATION_READY,
@@ -76,7 +86,7 @@ typedef enum {
   APPLICATION_SETTING_LINECODE,
   APPLICATION_RUNNING,
   APPLICATION_DISCONNECT,
-}ApplicationTypeDef;
+}ApplicationTypeDef;*/
 
 /*typedef enum  {
   osPriorityIdle          = -3,          ///< priority: idle (lowest)
@@ -150,25 +160,20 @@ typedef enum {
   CDC_SELECT_CONFIG,
 }CDC_DEMO_SelectMode;
 
-typedef struct _LOGBuffState {
-  char * 			buffer_base;
-  unsigned int		buffer_size;
-  __IO uint32_t     p_read;
-  __IO uint32_t     p_write;
-}CDC_LOG_BUFF_STATE;
+
 
 
 
 extern FATFS USBH_fatfs;
 extern USBH_HandleTypeDef hUSBHost;
 extern FATFS USBH_fatfs;
-extern osMessageQId AppliEvent;
-extern ApplicationTypeDef Appli_state;
+//extern osMessageQId AppliEvent;
+//extern ApplicationTypeDef Appli_state;
 
-extern CDC_DEMO_SelectMode CdcSelectMode;
-extern CDC_DEMO_SETTING_StateMachine CdcSettingsState;
-extern CDC_DEMO_StateMachine CdcDemo;
-extern uint8_t PrevSelect;
+//extern CDC_DEMO_SelectMode CdcSelectMode;
+//extern CDC_DEMO_SETTING_StateMachine CdcSettingsState;
+//extern CDC_DEMO_StateMachine CdcDemo;
+//extern uint8_t PrevSelect;
 
 
 #endif /* __MAIN_H */

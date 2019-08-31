@@ -34,7 +34,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "usbh_core.h"
 #include "systemlog.h"
-     
+
+/* CH340 Class Codes */
+#define USB_CH340_CLASS                                   (0xff)
+
+
 extern USBH_ClassTypeDef  CH340_Class;
 #define USBH_CH340_CLASS    &CH340_Class
 

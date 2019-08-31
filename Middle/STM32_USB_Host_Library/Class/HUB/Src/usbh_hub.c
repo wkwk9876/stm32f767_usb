@@ -8,6 +8,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbh_hub.h"
+#include "systemlog.h"
 
 /** @addtogroup USBH_LIB
 * @{
@@ -70,15 +71,19 @@ static USBH_StatusTypeDef USBH_HUB_ClassRequest (USBH_HandleTypeDef *phost);
 
 static USBH_StatusTypeDef USBH_HUB_Process(USBH_HandleTypeDef *phost);
 
+static USBH_StatusTypeDef USBH_HUB_SOFProcess (USBH_HandleTypeDef *phost);
 
-USBH_ClassTypeDef  TEMPLATE_Class = 
+
+USBH_ClassTypeDef  HUB_Class = 
 {
 	"HUB",
 	USB_HUB_CLASS,
-	USBH_TEMPLATE_InterfaceInit,
-	USBH_TEMPLATE_InterfaceDeInit,
-	USBH_TEMPLATE_ClassRequest,
-	USBH_TEMPLATE_Process
+	USBH_HUB_InterfaceInit,
+	USBH_HUB_InterfaceDeInit,
+	USBH_HUB_ClassRequest,
+	USBH_HUB_Process,
+	USBH_HUB_SOFProcess,
+	NULL,
 };
 /**
 * @}
@@ -88,6 +93,22 @@ USBH_ClassTypeDef  TEMPLATE_Class =
 /** @defgroup USBH_TEMPLATE_CORE_Private_Functions
 * @{
 */ 
+
+USBH_StatusTypeDef USBH_HUB_GetHUBDescriptor (USBH_HandleTypeDef *phost,
+                                            uint16_t length)
+{
+  
+	USBH_StatusTypeDef status;
+
+	status = USBH_GetDescriptor( phost,
+	                          USB_REQ_RECIPIENT_DEVICE | USB_REQ_TYPE_CLASS,                                  
+	                          USB_DESCRIPTOR_HUB << 8,
+	                          phost->device.Data,
+	                          length);
+
+	return status;
+}
+
 
 /**
   * @brief  USBH_TEMPLATE_InterfaceInit 
@@ -99,24 +120,74 @@ static USBH_StatusTypeDef USBH_HUB_InterfaceInit (USBH_HandleTypeDef *phost)
 {	
 	USBH_StatusTypeDef status = USBH_FAIL ;
 	uint8_t interface;
-	CDC_HandleTypeDef *CDC_Handle;
+	HUB_HandleTypeDef *HUB_Handle;
 
-	
-	interface = USBH_FindInterface(phost, 
-								   USB_HUB_CLASS, 
-								   0X00, 
-								   0x02);
-
-	if(interface == 0xFF) /* No Valid Interface */	
+	if(FULL_SPEED == phost->device.DevDesc.bDeviceProtocol)
 	{
+		__PRINT_LOG__(__CRITICAL_LEVEL__, "this full speed hub\r\n");
 		interface = USBH_FindInterface(phost, 
-								   USB_HUB_CLASS, 
-								   0X00, 
-								   0x01);
-		
+									   USB_HUB_CLASS, 
+									   0X00, 
+									   0x01);
+	}
+	else if(HIGH_SPEED_SINGLE_TT == phost->device.DevDesc.bDeviceProtocol)
+	{
+		__PRINT_LOG__(__CRITICAL_LEVEL__, "this high speed hub with single tt\r\n");
+		interface = USBH_FindInterface(phost, 
+									   USB_HUB_CLASS, 
+									   0X00, 
+									   0x00);
+	}
+	else if(HIGH_SPEED_MULT_TT == phost->device.DevDesc.bDeviceProtocol)
+	{
+		__PRINT_LOG__(__CRITICAL_LEVEL__, "this high speed hub with mult tt\r\n");
+		interface = USBH_FindInterface(phost, 
+								       USB_HUB_CLASS, 
+								       0X00, 
+								       0x02);
 	}
 	
-	return USBH_OK;
+	if(interface == 0xFF) /* No Valid Interface */	
+	{
+		__PRINT_LOG__(__CRITICAL_LEVEL__, "Cannot Find the interface for HUB Class.\r\n");
+	}
+	else
+	{
+		USBH_SelectInterface (phost, interface);
+		phost->pActiveClass->pData = (HUB_HandleTypeDef *)USBH_malloc (sizeof(HUB_HandleTypeDef));
+		HUB_Handle =	(HUB_HandleTypeDef*) phost->pActiveClass->pData; 
+
+		/*Collect the class specific endpoint address and length*/
+		if(phost->device.CfgDesc.Itf_Desc[interface].Ep_Desc[0].bEndpointAddress & 0x80)
+		{	   
+			HUB_Handle->CommItf.NotifEp = phost->device.CfgDesc.Itf_Desc[interface].Ep_Desc[0].bEndpointAddress;
+			HUB_Handle->CommItf.NotifEpSize	= phost->device.CfgDesc.Itf_Desc[interface].Ep_Desc[0].wMaxPacketSize;
+		}
+		else
+		{
+			HUB_Handle->CommItf.NotifEp = phost->device.CfgDesc.Itf_Desc[interface].Ep_Desc[0].bEndpointAddress;
+			HUB_Handle->CommItf.NotifEpSize  = phost->device.CfgDesc.Itf_Desc[interface].Ep_Desc[0].wMaxPacketSize;
+		}
+
+		/*Allocate the length for host channel number in*/
+		HUB_Handle->CommItf.NotifPipe = USBH_AllocPipe(phost, HUB_Handle->CommItf.NotifEp);
+	  
+		/* Open pipe for Notification endpoint */
+		USBH_OpenPipe  (phost,
+						HUB_Handle->CommItf.NotifPipe,
+						HUB_Handle->CommItf.NotifEp,							  
+						phost->device.address,
+						phost->device.speed,
+						USB_EP_TYPE_INTR,
+						HUB_Handle->CommItf.NotifEpSize); 
+
+		USBH_LL_SetToggle (phost, HUB_Handle->CommItf.NotifPipe, 0);
+
+		HUB_Handle->ctl_state = HUB_REQ_INIT;
+
+		status = USBH_OK; 
+	}
+	return status;
 }
 
 
@@ -129,7 +200,21 @@ static USBH_StatusTypeDef USBH_HUB_InterfaceInit (USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef USBH_HUB_InterfaceDeInit (USBH_HandleTypeDef *phost)
 {
+	HUB_HandleTypeDef *HUB_Handle =  (HUB_HandleTypeDef*) phost->pActiveClass->pData;
+  
+	if ( HUB_Handle->CommItf.NotifPipe)
+	{
+		USBH_ClosePipe(phost, HUB_Handle->CommItf.NotifPipe);
+		USBH_FreePipe  (phost, HUB_Handle->CommItf.NotifPipe);
+		HUB_Handle->CommItf.NotifPipe = 0;     /* Reset the Channel as Free */
+	}
 
+	if(phost->pActiveClass->pData)
+	{
+		USBH_free (phost->pActiveClass->pData);
+		phost->pActiveClass->pData = 0;
+	}
+	
 	return USBH_OK;
 }
 
@@ -142,8 +227,49 @@ USBH_StatusTypeDef USBH_HUB_InterfaceDeInit (USBH_HandleTypeDef *phost)
   */
 static USBH_StatusTypeDef USBH_HUB_ClassRequest (USBH_HandleTypeDef *phost)
 {   
+	USBH_StatusTypeDef status         = USBH_BUSY;
+	USBH_StatusTypeDef classReqStatus = USBH_BUSY;
+	HUB_HandleTypeDef *HUB_Handle =  (HUB_HandleTypeDef *) phost->pActiveClass->pData;
 
-	return USBH_OK; 
+	/* Switch HID state machine */
+	switch (HUB_Handle->ctl_state)
+	{
+		case HUB_REQ_INIT:
+			if ((classReqStatus = USBH_HUB_GetHUBDescriptor (phost, 4))== USBH_OK)
+			{
+				HUB_DescTypeDef      				*HUB_Desc = (HUB_DescTypeDef *)phost->device.Data;
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "bLength          : %d\r\n", HUB_Desc->bLength);
+				HUB_Handle->ctl_state = HUB_REQ_GET_HUB_DESC;
+			}
+			else if(USBH_FAIL == classReqStatus)
+			{
+				__PRINT_LOG__(__ERR_LEVEL__, "get failed!\r\n");
+			}
+			break;
+			
+		case HUB_REQ_GET_HUB_DESC:
+		    if ((classReqStatus = USBH_HUB_GetHUBDescriptor (phost, sizeof(HUB_DescTypeDef)))== USBH_OK)
+		    {
+				memcpy((char *)&(HUB_Handle->HUB_Desc), phost->device.Data, sizeof(HUB_DescTypeDef));
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "bLength          : %d\r\n", HUB_Handle->HUB_Desc.bLength);
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "bDescriptorType  : 0x%x\r\n", HUB_Handle->HUB_Desc.bDescriptorType);
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "bNbrPorts        : %d\r\n", HUB_Handle->HUB_Desc.bNbrPorts);
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "wHubCharacteristics: 0x%x\r\n", HUB_Handle->HUB_Desc.wHubCharacteristics);
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "bPwrOn2PwrGood   : 0x%x\r\n", HUB_Handle->HUB_Desc.bPwrOn2PwrGood);
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "bHubContrCurrent : 0x%x\r\n", HUB_Handle->HUB_Desc.bHubContrCurrent);
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "DeviceRemovable  : 0x%x\r\n", HUB_Handle->HUB_Desc.DeviceRemovable);
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "PortPwrCtrlMask  : 0x%x\r\n", HUB_Handle->HUB_Desc.PortPwrCtrlMask);
+				
+				HUB_Handle->ctl_state = HUB_REQ_GET_REPORT_DESC;
+		    }
+		    break;
+
+		case HUB_REQ_GET_REPORT_DESC:
+		default:
+			break;
+	}
+	
+	return status; 
 }
 
 
@@ -159,6 +285,11 @@ static USBH_StatusTypeDef USBH_HUB_Process (USBH_HandleTypeDef *phost)
 	return USBH_OK;
 }
 
+static USBH_StatusTypeDef USBH_HUB_SOFProcess (USBH_HandleTypeDef *phost)
+{
+	return USBH_OK;  
+}
+      
 
 /**
   * @brief  USBH_TEMPLATE_Init 
@@ -169,6 +300,8 @@ static USBH_StatusTypeDef USBH_HUB_Process (USBH_HandleTypeDef *phost)
 USBH_StatusTypeDef USBH_HUB_Init (USBH_HandleTypeDef *phost)
 {
   USBH_StatusTypeDef Status = USBH_BUSY;
+#if 0
+
 #if (USBH_USE_OS == 1)
   osEvent event;
   
@@ -190,6 +323,7 @@ USBH_StatusTypeDef USBH_HUB_Init (USBH_HandleTypeDef *phost)
       Status = USBH_OK;
     }
   }
+#endif
   return Status;   
 }
 

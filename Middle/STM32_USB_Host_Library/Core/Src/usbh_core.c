@@ -279,8 +279,11 @@ uint8_t  USBH_FindInterface(USBH_HandleTypeDef *phost, uint8_t Class, uint8_t Su
   pcfg = &phost->device.CfgDesc;  
   
   while (if_ix < USBH_MAX_NUM_INTERFACES)
-  {
+  {    
     pif = &pcfg->Itf_Desc[if_ix];
+	//__PRINT_LOG__(__CRITICAL_LEVEL__, "Class: 		%x\r\n", pif->bInterfaceClass);
+	//__PRINT_LOG__(__CRITICAL_LEVEL__, "SubClass: 	%x\r\n", pif->bInterfaceSubClass);
+	//__PRINT_LOG__(__CRITICAL_LEVEL__, "Protocol: 	%x\r\n", pif->bInterfaceProtocol);
     if(((pif->bInterfaceClass == Class) || (Class == 0xFF))&&
        ((pif->bInterfaceSubClass == SubClass) || (SubClass == 0xFF))&&
          ((pif->bInterfaceProtocol == Protocol) || (Protocol == 0xFF)))
@@ -528,6 +531,7 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
       
       for (idx = 0; idx < USBH_MAX_NUM_SUPPORTED_CLASS ; idx ++)
       {
+        //__PRINT_LOG__(__CRITICAL_LEVEL__, "%d 0x%x 0x%x\r\n", idx, phost->pClass[idx]->ClassCode, phost->device.CfgDesc.Itf_Desc[0].bInterfaceClass);
         if(phost->pClass[idx]->ClassCode == phost->device.CfgDesc.Itf_Desc[0].bInterfaceClass)
         {
           phost->pActiveClass = phost->pClass[idx];
@@ -691,6 +695,9 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
     /* Get FULL Device Desc  */
     if ( USBH_Get_DevDesc(phost, USB_DEVICE_DESC_SIZE)== USBH_OK)
     {
+      USBH_UsrLog("bDeviceClass		: %xh", phost->device.DevDesc.bDeviceClass ); 
+	  USBH_UsrLog("bDeviceSubClass	: %xh", phost->device.DevDesc.bDeviceSubClass ); 
+	  USBH_UsrLog("bDeviceProtocol	: %xh", phost->device.DevDesc.bDeviceProtocol ); 
       USBH_UsrLog("PID: %xh", phost->device.DevDesc.idProduct );  
       USBH_UsrLog("VID: %xh", phost->device.DevDesc.idVendor );  
       
