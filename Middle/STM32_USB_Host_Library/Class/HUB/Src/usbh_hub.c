@@ -109,6 +109,45 @@ USBH_StatusTypeDef USBH_HUB_GetHUBDescriptor (USBH_HandleTypeDef *phost,
 	return status;
 }
 
+USBH_StatusTypeDef USBH_HUB_GetHUBStatus (USBH_HandleTypeDef *phost,
+                                            uint16_t length)
+{
+  
+	//USBH_StatusTypeDef status;
+
+	if(phost->RequestState == CMD_SEND)
+	{
+		phost->Control.setup.b.bmRequestType = USB_D2H | 
+												USB_REQ_RECIPIENT_DEVICE |
+												USB_REQ_TYPE_CLASS;
+
+		phost->Control.setup.b.bRequest = USB_REQ_GET_STATUS;
+		phost->Control.setup.b.wValue.w = 0;
+		phost->Control.setup.b.wIndex.w = 0;
+		phost->Control.setup.b.wLength.w = length;           
+	}
+	return USBH_CtlReq(phost, phost->device.Data, length); 
+}
+
+											
+USBH_StatusTypeDef USBH_HUB_SetHUBPower (USBH_HandleTypeDef *phost, uint8_t port)
+{
+  
+	//USBH_StatusTypeDef status;
+
+	if(phost->RequestState == CMD_SEND)
+	{
+		phost->Control.setup.b.bmRequestType =  USB_H2D | 
+												USB_REQ_RECIPIENT_OTHER |
+												USB_REQ_TYPE_CLASS;
+
+		phost->Control.setup.b.bRequest = USB_REQ_SET_FEATURE;
+		phost->Control.setup.b.wValue.w = HUB_FEATURE_SEL_PORT_POWER;
+		phost->Control.setup.b.wIndex.w = port;
+		phost->Control.setup.b.wLength.w = 0;           
+	}
+	return USBH_CtlReq(phost, 0, 0); 
+}
 
 /**
   * @brief  USBH_TEMPLATE_InterfaceInit 
@@ -259,12 +298,41 @@ static USBH_StatusTypeDef USBH_HUB_ClassRequest (USBH_HandleTypeDef *phost)
 				__PRINT_LOG__(__CRITICAL_LEVEL__, "bHubContrCurrent : 0x%x\r\n", HUB_Handle->HUB_Desc.bHubContrCurrent);
 				__PRINT_LOG__(__CRITICAL_LEVEL__, "DeviceRemovable  : 0x%x\r\n", HUB_Handle->HUB_Desc.DeviceRemovable);
 				__PRINT_LOG__(__CRITICAL_LEVEL__, "PortPwrCtrlMask  : 0x%x\r\n", HUB_Handle->HUB_Desc.PortPwrCtrlMask);
-				
-				HUB_Handle->ctl_state = HUB_REQ_GET_REPORT_DESC;
+				HUB_Handle->port_index = 1;
+				HUB_Handle->ctl_state = HUB_REQ_SET_PORT_POWER;
 		    }
 		    break;
 
-		case HUB_REQ_GET_REPORT_DESC:
+		case HUB_REQ_GET_HUB_STATUS:
+			if((classReqStatus = USBH_HUB_GetHUBStatus(phost, sizeof(HUB_DescTypeDef))) == USBH_OK)
+			{
+				memcpy((char *)&(HUB_Handle->HUB_Status), phost->device.Data, sizeof(HUB_StatusTypeDef));
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "wHubChange       : 0x%x\r\n", HUB_Handle->HUB_Status.wHubChange);
+				__PRINT_LOG__(__CRITICAL_LEVEL__, "wHubStatus       : 0x%x\r\n", HUB_Handle->HUB_Status.wHubStatus);
+				HUB_Handle->ctl_state = HUB_REQ_SET_PORT_POWER;
+			}
+			__PRINT_LOG__(__CRITICAL_LEVEL__, "try       : %d\r\n", classReqStatus);
+			break;
+			
+		case HUB_REQ_SET_PORT_POWER:
+			if(USBH_HUB_SetHUBPower(phost, HUB_Handle->port_index) == USBH_OK)
+			{
+				++HUB_Handle->port_index;
+				if(HUB_Handle->port_index > HUB_Handle->HUB_Desc.bNbrPorts)
+				{
+					//HUB_Handle->ctl_state = HUB_REQ_SCAN_PORT;
+					__PRINT_LOG__(__CRITICAL_LEVEL__, "Power       : %d\r\n", HUB_Handle->port_index - 1);
+					status = USBH_OK;
+				}
+			}
+			break;
+
+		/*case HUB_REQ_SCAN_PORT:
+			if(USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe) == USBH_OK)
+			{
+				status = USBH_OK;
+			}
+			break;*/
 		default:
 			break;
 	}
@@ -281,7 +349,16 @@ static USBH_StatusTypeDef USBH_HUB_ClassRequest (USBH_HandleTypeDef *phost)
   */
 static USBH_StatusTypeDef USBH_HUB_Process (USBH_HandleTypeDef *phost)
 {
- 
+	HUB_HandleTypeDef *HUB_Handle =  (HUB_HandleTypeDef *) phost->pActiveClass->pData;
+	
+
+	if(USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe) == USBH_OK)
+	{
+		__PRINT_LOG__(__CRITICAL_LEVEL__, "Port state       : 0x%x\r\n", HUB_Handle->hub_intr_buf[0]);
+		//status = USBH_OK;
+
+		USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe);	
+	}
 	return USBH_OK;
 }
 

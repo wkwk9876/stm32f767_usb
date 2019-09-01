@@ -990,9 +990,14 @@
               <FilePath>..\User\file_operations.c</FilePath>
             </File>
             <File>
-              <FileName>cdc_configuration.c</FileName>
+              <FileName>app_ch340.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\User\cdc_configuration.c</FilePath>
+              <FilePath>..\User\app_ch340.c</FilePath>
+            </File>
+            <File>
+              <FileName>sdram_alloc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\sdram_alloc.c</FilePath>
             </File>
           </Files>
         </Group>

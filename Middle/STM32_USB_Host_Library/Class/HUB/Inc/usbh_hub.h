@@ -21,6 +21,20 @@
 #define USB_HUB_CLASS                                   0x09
 #define USB_DESCRIPTOR_HUB                   			0x29
 
+#define HUB_FEATURE_SEL_PORT_CONN         		0x00
+#define HUB_FEATURE_SEL_PORT_ENABLE             0x01
+#define HUB_FEATURE_SEL_PORT_SUSPEND            0x02
+#define HUB_FEATURE_SEL_PORT_OVER_CURRENT       0x03
+#define HUB_FEATURE_SEL_PORT_RESET              0x04
+#define HUB_FEATURE_SEL_PORT_POWER              0x08
+#define HUB_FEATURE_SEL_PORT_LOW_SPEED          0x09
+#define HUB_FEATURE_SEL_C_PORT_CONNECTION       0x10
+#define HUB_FEATURE_SEL_C_PORT_ENABLE           0x11
+#define HUB_FEATURE_SEL_C_PORT_SUSPEND          0x12
+#define HUB_FEATURE_SEL_C_PORT_OVER_CURRENT     0x13
+#define HUB_FEATURE_SEL_C_PORT_RESET            0x14
+#define HUB_FEATURE_SEL_PORT_INDICATOR          0x16
+
 
 
 /** @addtogroup USBH_LIB
@@ -54,12 +68,11 @@ typedef enum
 typedef enum
 {
 	HUB_REQ_INIT = 0,
-	HUB_REQ_IDLE, 
-	HUB_REQ_GET_REPORT_DESC,
+	HUB_REQ_IDLE, 	
 	HUB_REQ_GET_HUB_DESC,
-	HUB_REQ_SET_IDLE,
-	HUB_REQ_SET_PROTOCOL,
-	HUB_REQ_SET_REPORT,
+	HUB_REQ_GET_HUB_STATUS,
+	HUB_REQ_SET_PORT_POWER,
+	HUB_REQ_SCAN_PORT,
 }
 HUB_CtlStateTypeDef;
 
@@ -101,15 +114,24 @@ typedef struct __attribute__ ((packed)) _HUBDescriptor
 	uint8_t  resvered[3];
 } HUB_DescTypeDef;
 
+typedef struct __attribute__ ((packed)) usb_hub_status {
+	unsigned short wHubStatus;
+	unsigned short wHubChange;
+}HUB_StatusTypeDef ;
 
 
 /* Structure for HUB process */
 typedef struct _HUB_Process
 {
 	HUB_CommItfTypedef                	CommItf;
-	HUB_DescTypeDef      				HUB_Desc;  
+	HUB_DescTypeDef      				HUB_Desc;
+	HUB_StatusTypeDef					HUB_Status;
 	HUB_CtlStateTypeDef  				ctl_state;
 	USBH_StatusTypeDef  				( * Init)(USBH_HandleTypeDef *phost);
+
+	uint8_t								port_num;
+	uint8_t								port_index;
+	uint8_t								hub_intr_buf[64];
 
   uint8_t              OutPipe; 
   uint8_t              InPipe; 
