@@ -445,6 +445,25 @@ typedef struct
   void*                pData;
 } USBH_ClassTypeDef;
 
+/*typedef struct _USBH_Child_HandleTypeDef
+{
+	__IO HOST_StateTypeDef     gState;     
+	ENUM_StateTypeDef     EnumState;    
+	CMD_StateTypeDef      RequestState;
+	USBH_DeviceTypeDef    device;
+	USBH_ClassTypeDef*    pActiveClass;
+	uint32_t              ClassNumber;
+	void*                 pData;                  
+	void                 (* pUser )(struct _USBH_HandleTypeDef *pHandle, uint8_t id);
+#if (USBH_USE_OS == 1)
+	osMessageQId          os_event;   
+	osThreadId            thread; 
+#endif 
+	void *				  app_class;
+	void *				  app_data;
+	uint8_t				  is_child;
+}USBH_Child_HandleTypeDef;*/
+
 /* USB Host handle structure */
 typedef struct _USBH_HandleTypeDef
 {
@@ -456,7 +475,7 @@ typedef struct _USBH_HandleTypeDef
   USBH_ClassTypeDef*    pClass[USBH_MAX_NUM_SUPPORTED_CLASS];
   USBH_ClassTypeDef*    pActiveClass;
   uint32_t              ClassNumber;
-  uint32_t              Pipes[15];
+  __IO uint32_t         Pipes[15];
   __IO uint32_t         Timer;
   uint8_t               id;  
   void*                 pData;                  
@@ -468,6 +487,10 @@ typedef struct _USBH_HandleTypeDef
 #endif  
   void *				app_class;
   void *				app_data;
+  uint8_t				is_child;
+  struct _USBH_HandleTypeDef * parent;
+  struct _USBH_HandleTypeDef * children[USBH_MAX_NUM_CHILD];
+  __IO CTRL_StateTypeDef 	last_ctrl_status;
 } USBH_HandleTypeDef;
 
 

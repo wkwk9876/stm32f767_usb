@@ -533,6 +533,13 @@ USBH_StatusTypeDef USBH_CtlReq     (USBH_HandleTypeDef *phost,
 {
   USBH_StatusTypeDef status;
   status = USBH_BUSY;
+
+  if ((phost->Pipes[phost->Control.pipe_in] & 0x8000) == 0 || (phost->Pipes[phost->Control.pipe_out] & 0x8000) == 0)
+  {
+    phost->RequestState = CMD_SEND;
+	status = USBH_FAIL;
+	return status;
+  } 
   
   __PRINT_LOG__(__DEBUG_LEVEL__, "RequestState :%d\r\n", phost->RequestState); 
    

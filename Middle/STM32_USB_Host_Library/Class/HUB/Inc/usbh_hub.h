@@ -119,6 +119,34 @@ typedef struct __attribute__ ((packed)) usb_hub_status {
 	unsigned short wHubChange;
 }HUB_StatusTypeDef ;
 
+typedef struct __attribute__ ((packed)) _USB_HUB_PORT_STATUS
+{
+	struct __attribute__ ((packed)) _port_status{
+		uint8_t     PORT_CONNECTION      : 1;
+		uint8_t     PORT_ENABLE          : 1;
+		uint8_t     PORT_SUSPEND         : 1;
+		uint8_t     PORT_OVER_CURRENT    : 1;
+		uint8_t     PORT_RESET           : 1;
+		uint8_t     RESERVED_1           : 3;
+		uint8_t     PORT_POWER           : 1;
+		uint8_t     PORT_LOW_SPEED       : 1;
+		uint8_t     PORT_HIGH_SPEED      : 1;
+		uint8_t     PORT_TEST            : 1;
+		uint8_t     PORT_INDICATOR       : 1;
+		uint8_t     RESERVED_2           : 3;
+	}wPortStatus;
+	struct __attribute__ ((packed)) _port_change{
+		uint8_t     C_PORT_CONNECTION    : 1;
+		uint8_t     C_PORT_ENABLE        : 1;
+		uint8_t     C_PORT_SUSPEND       : 1;
+		uint8_t     C_PORT_OVER_CURRENT  : 1;
+		uint8_t     C_PORT_RESET         : 1;
+		uint8_t     RESERVED_1           : 3;
+		uint8_t     RESERVED_2;
+	}wPortChange;
+}HUB_PortStatus;
+
+
 
 /* Structure for HUB process */
 typedef struct _HUB_Process
@@ -132,6 +160,8 @@ typedef struct _HUB_Process
 	uint8_t								port_num;
 	uint8_t								port_index;
 	uint8_t								hub_intr_buf[64];
+	volatile unsigned char 				port_state;
+	unsigned int 						sof_num;
 
   uint8_t              OutPipe; 
   uint8_t              InPipe; 

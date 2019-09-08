@@ -122,7 +122,7 @@ USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, void (*pUsrFunc)(USBH_H
 #if defined (USBH_PROCESS_STACK_SIZE)
   osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, USBH_PROCESS_STACK_SIZE);
 #else
-  osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, 8 * configMINIMAL_STACK_SIZE);
+  osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, 128 * configMINIMAL_STACK_SIZE);
 #endif  
   phost->thread = osThreadCreate (osThread(USBH_Thread), phost);
 #endif  
@@ -403,8 +403,11 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     
   __PRINT_LOG__(__DEBUG_LEVEL__, "gState: %d\r\n", phost->gState);
 
-  ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_HPRTINT;
-  //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_DISCINT;
+  if(NULL != phost->pData)
+  {
+    ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_HPRTINT;
+    //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_DISCINT;
+  }
   
   switch (phost->gState)
   {
@@ -620,13 +623,15 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     break;
   }
 
-  //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_DISCINT;
-  ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_HPRTINT;
+  if(NULL != phost->pData)
+  {
+    //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_DISCINT;
+    ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_HPRTINT;
+  }
   
  return USBH_OK;  
 }
 
-CTRL_StateTypeDef last_ctrl_status = CTRL_IDLE;
 
 /**
   * @brief  USBH_HandleEnum 
@@ -638,6 +643,11 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
 {
   USBH_StatusTypeDef Status = USBH_BUSY;  
   USBH_StatusTypeDef tmpStatus = USBH_BUSY; 
+
+  /*while(phost->parent)
+  {
+    phost = phost->parent;
+  }*/
     
   __PRINT_LOG__(__DEBUG_LEVEL__, "EnumState: %d\r\n", phost->EnumState);
   
@@ -650,7 +660,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
       phost->Control.pipe_size = phost->device.DevDesc.bMaxPacketSize;
 
       phost->EnumState = ENUM_GET_FULL_DEV_DESC;
-	  last_ctrl_status = CTRL_IDLE;
+	  phost->last_ctrl_status = CTRL_IDLE;
       
       /* modify control channels configuration for MaxPacket size */
       USBH_OpenPipe (phost,
@@ -673,9 +683,9 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
     }
     else
     {
-      if(last_ctrl_status != CTRL_IDLE && last_ctrl_status == phost->Control.state)
+      if(phost->last_ctrl_status != CTRL_IDLE && phost->last_ctrl_status == phost->Control.state)
       {
-        last_ctrl_status = CTRL_IDLE;
+        phost->last_ctrl_status = CTRL_IDLE;
 		__PRINT_LOG__(__ERR_LEVEL__, "ENUM failed(%d), reset to idle!!!\r\n", phost->Control.state);
 		Status = USBH_FAIL;
 #if (USBH_USE_OS == 1)
@@ -685,7 +695,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
       }
 	  else
 	  {
-	    last_ctrl_status = phost->Control.state;
+	    phost->last_ctrl_status = phost->Control.state;
 		__PRINT_LOG__(__ERR_LEVEL__, "USBH_Get_DevDesc failed(%d)\r\n", tmpStatus);
 	  }      
     }
@@ -998,7 +1008,23 @@ static void USBH_Process_OS(void const * argument)
     
     if( event.status == osEventMessage )
     {
+      int i;
       USBH_Process((USBH_HandleTypeDef *)argument);
+
+	  for(i = 0; i < USBH_MAX_NUM_CHILD; ++i)
+  	  {
+  	    USBH_HandleTypeDef * phost = (USBH_HandleTypeDef *)argument;
+  	    USBH_HandleTypeDef * children = phost->children[i];
+  	  	if(NULL != children)
+	  	{
+	  	  __PRINT_LOG__(__CRITICAL_LEVEL__, "children[%d]++++++++++++++++++++++\r\n", i);
+	      USBH_Process(children);		  
+  	  	}
+		else
+		{
+		  //__PRINT_LOG__(__CRITICAL_LEVEL__, "children[%d] is null++++++++++++++++++++++\r\n", i);
+		}
+  	  }
     }
    }
 }

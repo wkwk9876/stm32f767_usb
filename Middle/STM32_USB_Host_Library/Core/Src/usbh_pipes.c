@@ -97,6 +97,11 @@ USBH_StatusTypeDef USBH_OpenPipe  (USBH_HandleTypeDef *phost,
                             uint16_t mps)
 {
 
+  while(phost->parent)
+  {
+    phost = phost->parent;
+  }
+
   USBH_LL_OpenPipe(phost,
                         pipe_num,
                         epnum,
@@ -119,6 +124,10 @@ USBH_StatusTypeDef USBH_OpenPipe  (USBH_HandleTypeDef *phost,
 USBH_StatusTypeDef USBH_ClosePipe  (USBH_HandleTypeDef *phost,
                             uint8_t pipe_num)
 {
+  while(phost->parent)
+  {
+    phost = phost->parent;
+  }
 
   USBH_LL_ClosePipe(phost, pipe_num);
   
@@ -136,6 +145,11 @@ USBH_StatusTypeDef USBH_ClosePipe  (USBH_HandleTypeDef *phost,
 uint8_t USBH_AllocPipe  (USBH_HandleTypeDef *phost, uint8_t ep_addr)
 {
   uint16_t pipe;
+
+  while(phost->parent)
+  {
+    phost = phost->parent;
+  }
   
   pipe =  USBH_GetFreePipe(phost);
 
@@ -155,6 +169,11 @@ uint8_t USBH_AllocPipe  (USBH_HandleTypeDef *phost, uint8_t ep_addr)
   */
 USBH_StatusTypeDef USBH_FreePipe  (USBH_HandleTypeDef *phost, uint8_t idx)
 {
+  while(phost->parent)
+  {
+    phost = phost->parent;
+  }
+
    if(idx < 11)
    {
 	 phost->Pipes[idx] &= 0x7FFF;

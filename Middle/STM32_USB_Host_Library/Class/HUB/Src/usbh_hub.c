@@ -10,6 +10,8 @@
 #include "usbh_hub.h"
 #include "systemlog.h"
 
+#define __TIME_OUT_COUNT__	0x100
+
 /** @addtogroup USBH_LIB
 * @{
 */
@@ -149,6 +151,88 @@ USBH_StatusTypeDef USBH_HUB_SetHUBPower (USBH_HandleTypeDef *phost, uint8_t port
 	return USBH_CtlReq(phost, 0, 0); 
 }
 
+USBH_StatusTypeDef USBH_HUB_GetPortStatus (USBH_HandleTypeDef *phost, uint8_t port, uint16_t length)
+{
+	USBH_StatusTypeDef status;
+	volatile unsigned int timeout = 0;
+
+	//if(phost->RequestState == CMD_SEND)
+	//{
+		phost->Control.setup.b.bmRequestType =  USB_D2H | 
+												USB_REQ_RECIPIENT_OTHER |
+												USB_REQ_TYPE_CLASS;
+		
+		phost->Control.setup.b.bRequest = USB_REQ_GET_STATUS;
+		phost->Control.setup.b.wValue.w = 0;
+		phost->Control.setup.b.wIndex.w = port;
+		phost->Control.setup.b.wLength.w = length;  
+	//}
+
+	while((timeout < __TIME_OUT_COUNT__) && (USBH_BUSY == (status = USBH_CtlReq(phost, phost->device.Data, length))) && (HOST_DEV_DISCONNECTED != phost->gState))
+	{		
+		++timeout;
+		//__PRINT_LOG__(__CRITICAL_LEVEL__, "status:%d %d\r\n", status, timeout);
+	}
+
+	if(timeout >= __TIME_OUT_COUNT__)
+		__PRINT_LOG__(__CRITICAL_LEVEL__, "time out\r\n");
+	
+	return status;//USBH_CtlReq(phost, phost->device.Data, length);//
+}
+
+USBH_StatusTypeDef USBH_HUB_ClearPort(USBH_HandleTypeDef *phost, uint8_t port, uint32_t feature)
+{
+	USBH_StatusTypeDef status;
+	volatile unsigned int timeout = 0;
+
+	phost->Control.setup.b.bmRequestType =  USB_H2D | 
+											USB_REQ_RECIPIENT_OTHER |
+											USB_REQ_TYPE_CLASS;
+	
+	phost->Control.setup.b.bRequest = USB_REQ_CLEAR_FEATURE;
+	phost->Control.setup.b.wValue.w = feature;
+	phost->Control.setup.b.wIndex.w = port;
+	phost->Control.setup.b.wLength.w = 0;
+
+	while((timeout < __TIME_OUT_COUNT__) && (USBH_BUSY == (status = USBH_CtlReq(phost, 0, 0))) && (HOST_DEV_DISCONNECTED != phost->gState))
+	{
+		++timeout;
+		//__PRINT_LOG__(__CRITICAL_LEVEL__, "status:%d\r\n", status);
+	}
+
+	if(timeout >= __TIME_OUT_COUNT__)
+		__PRINT_LOG__(__CRITICAL_LEVEL__, "time out(feature %d)\r\n", feature);
+
+	return status;
+}
+
+USBH_StatusTypeDef USBH_HUB_SetPort(USBH_HandleTypeDef *phost, uint8_t port, uint32_t feature)
+{
+	USBH_StatusTypeDef status;
+	volatile unsigned int timeout = 0;
+
+	phost->Control.setup.b.bmRequestType =  USB_H2D | 
+											USB_REQ_RECIPIENT_OTHER |
+											USB_REQ_TYPE_CLASS;
+	
+	phost->Control.setup.b.bRequest = USB_REQ_SET_FEATURE;
+	phost->Control.setup.b.wValue.w = feature;
+	phost->Control.setup.b.wIndex.w = port;
+	phost->Control.setup.b.wLength.w = 0;
+
+	while((timeout < __TIME_OUT_COUNT__) && (USBH_BUSY == (status = USBH_CtlReq(phost, 0, 0))) && (HOST_DEV_DISCONNECTED != phost->gState))
+	{
+		++timeout;
+		//__PRINT_LOG__(__CRITICAL_LEVEL__, "status:%d\r\n", status);
+	}
+
+	if(timeout >= __TIME_OUT_COUNT__)
+		__PRINT_LOG__(__CRITICAL_LEVEL__, "time out(feature %d)\r\n", feature);
+
+	return status;
+}
+
+
 /**
   * @brief  USBH_TEMPLATE_InterfaceInit 
   *         The function init the TEMPLATE class.
@@ -195,6 +279,8 @@ static USBH_StatusTypeDef USBH_HUB_InterfaceInit (USBH_HandleTypeDef *phost)
 		USBH_SelectInterface (phost, interface);
 		phost->pActiveClass->pData = (HUB_HandleTypeDef *)USBH_malloc (sizeof(HUB_HandleTypeDef));
 		HUB_Handle =	(HUB_HandleTypeDef*) phost->pActiveClass->pData; 
+
+		memset(HUB_Handle, 0, sizeof(HUB_HandleTypeDef));
 
 		/*Collect the class specific endpoint address and length*/
 		if(phost->device.CfgDesc.Itf_Desc[interface].Ep_Desc[0].bEndpointAddress & 0x80)
@@ -340,6 +426,36 @@ static USBH_StatusTypeDef USBH_HUB_ClassRequest (USBH_HandleTypeDef *phost)
 	return status; 
 }
 
+static USBH_StatusTypeDef  HUB_Child_DeInitStateMachine(USBH_HandleTypeDef *phost)
+{
+  uint32_t i = 0;
+
+  /* Clear Pipes flags*/
+  for ( ; i < USBH_MAX_PIPES_NBR; i++)
+  {
+    phost->Pipes[i] = 0;
+  }
+  
+  for(i = 0; i< USBH_MAX_DATA_BUFFER; i++)
+  {
+    phost->device.Data[i] = 0;
+  }
+  
+  phost->gState = HOST_IDLE;
+  phost->EnumState = ENUM_IDLE;
+  phost->RequestState = CMD_SEND;
+  phost->Timer = 0;  
+  
+  phost->Control.state = CTRL_SETUP;
+  phost->Control.pipe_size = 0x40;  
+  phost->Control.errorcount = 0;
+  
+  phost->device.address = 0;
+  phost->device.speed   = USBH_SPEED_FULL;
+  
+  return USBH_OK;
+}
+
 
 /**
   * @brief  USBH_TEMPLATE_Process 
@@ -349,21 +465,211 @@ static USBH_StatusTypeDef USBH_HUB_ClassRequest (USBH_HandleTypeDef *phost)
   */
 static USBH_StatusTypeDef USBH_HUB_Process (USBH_HandleTypeDef *phost)
 {
-	HUB_HandleTypeDef *HUB_Handle =  (HUB_HandleTypeDef *) phost->pActiveClass->pData;
-	
+	HUB_HandleTypeDef 	*HUB_Handle = NULL;
+	USBH_ClassTypeDef	*pActiveClass = phost->pActiveClass;
+	unsigned char 		port = 0;
+	volatile unsigned char 		tmp_port_state;
 
-	if(USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe) == USBH_OK)
+	if(NULL == pActiveClass)
+		return USBH_OK;
+
+	HUB_Handle =  (HUB_HandleTypeDef *) pActiveClass->pData;
+	if(NULL == HUB_Handle)
+		return USBH_OK;
+
+	tmp_port_state = HUB_Handle->port_state;
+
+	while(tmp_port_state)
+	{
+		if(tmp_port_state & 0x01)
+		{
+			if(USBH_OK == USBH_HUB_GetPortStatus(phost, port, sizeof(HUB_PortStatus)))
+			{
+				HUB_PortStatus * port_status = (HUB_PortStatus *)phost->device.Data;
+				if(port_status->wPortStatus.PORT_POWER)
+				{
+					__PRINT_LOG__(__CRITICAL_LEVEL__, "get port%d port_status       : 0x%x 0x%x\r\n", 
+									port, port_status->wPortChange, port_status->wPortStatus);
+					if(port_status->wPortStatus.PORT_POWER) 
+					{
+						unsigned char ret;
+						if(port_status->wPortChange.C_PORT_CONNECTION)
+						{
+							ret += USBH_HUB_ClearPort(phost, port, HUB_FEATURE_SEL_C_PORT_CONNECTION);
+						}
+
+						if(port_status->wPortChange.C_PORT_ENABLE)
+						{
+							ret += USBH_HUB_ClearPort(phost, port, HUB_FEATURE_SEL_C_PORT_ENABLE);
+						}
+
+						if(port_status->wPortChange.C_PORT_SUSPEND)
+						{
+							ret += USBH_HUB_ClearPort(phost, port, HUB_FEATURE_SEL_C_PORT_SUSPEND);
+						}
+
+						if(port_status->wPortChange.C_PORT_OVER_CURRENT)
+						{
+							ret += USBH_HUB_ClearPort(phost, port, HUB_FEATURE_SEL_C_PORT_OVER_CURRENT);
+						}
+
+						if(port_status->wPortChange.C_PORT_RESET)
+						{
+							ret += USBH_HUB_ClearPort(phost, port, HUB_FEATURE_SEL_C_PORT_RESET);
+						}
+
+						if(port_status->wPortStatus.PORT_CONNECTION)
+						{
+							if(port_status->wPortStatus.PORT_ENABLE)
+							{
+								//int child_num = 0;
+								__PRINT_LOG__(__CRITICAL_LEVEL__, "port%d enabled!\r\n", port); 
+
+								if(NULL == phost->children[port - 1])
+								{
+									int i;
+									struct _USBH_HandleTypeDef * tmp;
+									
+									tmp = (struct _USBH_HandleTypeDef *)USBH_malloc(sizeof(struct _USBH_HandleTypeDef));
+									if(NULL == tmp)
+									{
+										__PRINT_LOG__(__CRITICAL_LEVEL__, "malloc failed!\r\n"); 
+									}
+									else
+									{
+										memset(phost->children[port - 1], 0, sizeof(struct _USBH_HandleTypeDef));
+										memcpy(phost->children[port - 1], phost, sizeof(struct _USBH_HandleTypeDef));
+										phost->children[port - 1] = tmp;
+										
+										HUB_Child_DeInitStateMachine(phost->children[port - 1]);
+									
+										phost->children[port - 1]->is_child = 1;
+										phost->children[port - 1]->parent = phost;
+										phost->children[port - 1]->device.is_connected = 1;
+										phost->children[port - 1]->os_event = phost->os_event;
+										phost->children[port - 1]->pUser = phost->pUser;
+										
+										if(port_status->wPortStatus.PORT_LOW_SPEED)
+											phost->children[port - 1]->device.speed = USBH_SPEED_LOW;
+										else if(port_status->wPortStatus.PORT_HIGH_SPEED)
+											phost->children[port - 1]->device.speed = USBH_SPEED_HIGH;
+										else
+											phost->children[port - 1]->device.speed = USBH_SPEED_FULL;
+
+										phost->children[port - 1]->ClassNumber = phost->ClassNumber;
+										for(i = 0; i < phost->ClassNumber; ++i)
+										{
+											phost->children[port - 1]->pClass[i] = phost->pClass[i];
+										}
+
+										phost->children[port - 1]->Control = phost->Control;
+										phost->children[port - 1]->Control.buff = NULL;
+										phost->children[port - 1]->pData = phost->pData;//NULL;//must null//	
+									
+										phost->children[port - 1]->gState = HOST_ENUMERATION;
+
+										__PRINT_LOG__(__CRITICAL_LEVEL__, "port%d online!\r\n", port); 
+
+										osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
+									}
+									
+								}
+								/*for(child_num = 0; child_num < USBH_MAX_NUM_CHILD; ++child_num)
+								{
+									if(NULL == phost->children[child_num])
+									{
+										int i;
+										phost->children[child_num] = (struct _USBH_HandleTypeDef *)USBH_malloc(sizeof(struct _USBH_HandleTypeDef));
+										memset(phost->children[child_num], 0, sizeof(struct _USBH_HandleTypeDef));
+										
+										phost->children[child_num]->is_child = 1;
+										phost->children[child_num]->parent = phost;
+										phost->children[child_num]->device.is_connected = 1;
+
+										phost->children[child_num]->os_event = phost->os_event;
+										
+										phost->children[child_num]->ClassNumber = phost->ClassNumber;
+										for(i = 0; i < phost->ClassNumber; ++i)
+										{
+											phost->children[child_num]->pClass[i] = phost->pClass[i];
+										}
+
+										phost->children[child_num]->Control = phost->Control;
+										phost->children[child_num]->Control.buff = NULL;
+										phost->children[child_num]->pData = NULL;//must null//phost->pData;//
+
+										phost->children[child_num]->pUser = phost->pUser;
+
+										phost->children[child_num]->gState = HOST_ENUMERATION;
+
+										osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
+
+										break;
+									}
+								}
+								if(child_num >= USBH_MAX_NUM_CHILD)
+								{
+									__PRINT_LOG__(__CRITICAL_LEVEL__, "no free chilren!\r\n"); 
+								}*/
+							}
+							else
+							{
+								ret += USBH_HUB_SetPort(phost, port, HUB_FEATURE_SEL_PORT_RESET);
+							}
+						}
+						else
+						{
+							__PRINT_LOG__(__CRITICAL_LEVEL__, "port%d disabled!\r\n", port); 
+						}
+					}
+				}				
+			}
+		}
+		//__PRINT_LOG__(__CRITICAL_LEVEL__, "port:%d tmp_port_state:%x!\r\n", port, tmp_port_state); 
+		++port;
+		tmp_port_state >>= 1;
+	}
+	
+	__PRINT_LOG__(__CRITICAL_LEVEL__, "port:%d tmp_port_state:%x!\r\n", port, tmp_port_state); 
+	/*if(USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe) == USBH_OK)
 	{
 		__PRINT_LOG__(__CRITICAL_LEVEL__, "Port state       : 0x%x\r\n", HUB_Handle->hub_intr_buf[0]);
 		//status = USBH_OK;
 
 		USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe);	
-	}
+	}*/
 	return USBH_OK;
 }
 
+//unsigned int sof_num = 0;
 static USBH_StatusTypeDef USBH_HUB_SOFProcess (USBH_HandleTypeDef *phost)
 {
+	HUB_HandleTypeDef 	*HUB_Handle = NULL;
+	USBH_ClassTypeDef	*pActiveClass = phost->pActiveClass;
+
+	if(NULL == pActiveClass)
+		return USBH_OK;
+
+	HUB_Handle =  (HUB_HandleTypeDef *) pActiveClass->pData;
+	if(NULL == HUB_Handle)
+		return USBH_OK;
+	
+	if(++(HUB_Handle->sof_num) % 12 != 0)
+		return USBH_OK;
+
+	if(USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe) == USBH_OK)
+	{
+  
+		//osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
+	  
+		HUB_Handle->port_state = HUB_Handle->hub_intr_buf[0];
+		
+		//__PRINT_LOG__(__CRITICAL_LEVEL__, "Port state       : 0x%x\r\n", port_state);
+		//status = USBH_OK;		
+
+		USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe);	
+	}
+
 	return USBH_OK;  
 }
       
