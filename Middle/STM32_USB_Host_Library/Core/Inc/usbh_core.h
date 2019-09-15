@@ -144,6 +144,9 @@ void                 USBH_LL_PortEnabled  (USBH_HandleTypeDef *phost);
 void                 USBH_Delay (uint32_t Delay);
 void                 USBH_LL_SetTimer     (USBH_HandleTypeDef *phost, uint32_t );  
 void                 USBH_LL_IncTimer     (USBH_HandleTypeDef *phost);  
+
+uint8_t 			USBH_Free_One_Address(USBH_HandleTypeDef *phost);
+
 /**
   * @}
   */ 

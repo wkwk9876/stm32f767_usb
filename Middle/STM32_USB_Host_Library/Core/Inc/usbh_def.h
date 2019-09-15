@@ -475,7 +475,7 @@ typedef struct _USBH_HandleTypeDef
   USBH_ClassTypeDef*    pClass[USBH_MAX_NUM_SUPPORTED_CLASS];
   USBH_ClassTypeDef*    pActiveClass;
   uint32_t              ClassNumber;
-  __IO uint32_t         Pipes[15];
+  __IO uint32_t         *Pipes;//[15];
   __IO uint32_t         Timer;
   uint8_t               id;  
   void*                 pData;                  
@@ -485,6 +485,8 @@ typedef struct _USBH_HandleTypeDef
   osMessageQId          os_event;   
   osThreadId            thread; 
 #endif  
+  uint8_t				*address;
+  void *				pClassData[USBH_MAX_NUM_CLASS_DATA];
   void *				app_class;
   void *				app_data;
   uint8_t				is_child;
