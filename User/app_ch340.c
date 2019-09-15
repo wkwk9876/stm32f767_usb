@@ -224,7 +224,7 @@ static void Start_CH340_Application_Thread(void const *argument)
 				break;
 
 			case CH340_APPLICATION_SETTING_LINECODE:	  	
-				CDC_Handle =  (CDC_HandleTypeDef*) phost->pActiveClass->pData; 
+				CDC_Handle =  (CDC_HandleTypeDef*) phost->pClassData[0]; //(CDC_HandleTypeDef*) phost->pActiveClass->pData; 
 				app_data->Appli_state = CH340_APPLICATION_SETTING_LINECODE;
 				if(USBH_OK == USBH_CDC_SetLineCoding(phost, &(CDC_Handle->LineCoding)))
 				{
@@ -233,7 +233,7 @@ static void Start_CH340_Application_Thread(void const *argument)
 				break;
 
 			case CH340_APPLICATION_RUNNING:
-				CDC_Handle =  (CDC_HandleTypeDef*) phost->pActiveClass->pData; 
+				CDC_Handle =  (CDC_HandleTypeDef*) phost->pClassData[0]; //(CDC_HandleTypeDef*) phost->pActiveClass->pData; 
 				app_data->Appli_state = CH340_APPLICATION_RUNNING;
 				if(CDC_IDLE_STATE == CDC_Handle->state)
 				{  			

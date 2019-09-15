@@ -80,6 +80,37 @@ static USBH_StatusTypeDef  DeInitStateMachine(USBH_HandleTypeDef *phost);
 static void USBH_Process_OS(void const * argument);
 #endif
 
+uint8_t USBH_Get_One_Address(USBH_HandleTypeDef *phost)
+{
+	uint8_t idx = 0;
+
+    if(phost->device.address)
+		return phost->device.address;
+	
+	for(idx = 0; idx < USBH_MAX_NUM_DEVICE; ++idx)
+	{
+		if(!phost->address[idx])
+		{
+		    phost->address[idx] = 1;
+		    phost->device.address = idx + 1;
+			return idx + 1;
+		}
+	}
+	return 0;//failed
+}
+
+uint8_t USBH_Free_One_Address(USBH_HandleTypeDef *phost)
+{
+    if(phost->device.address)
+	{
+		//__PRINT_LOG__(__CRITICAL_LEVEL__, "free addr: %d!\r\n", phost->device.address);
+		phost->address[phost->device.address - 1] = 0;
+		phost->device.address = 0;
+	}
+	return phost->device.address;
+}
+
+
 /**
   * @brief  HCD_Init 
   *         Initialize the HOST Core.
@@ -102,6 +133,11 @@ USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, void (*pUsrFunc)(USBH_H
   /* Unlink class*/
   phost->pActiveClass = NULL;
   phost->ClassNumber = 0;
+
+  phost->Pipes = (__IO uint32_t *)USBH_malloc(USBH_MAX_PIPES_NBR * sizeof(uint32_t *));
+  phost->address = (uint8_t *)USBH_malloc(USBH_MAX_NUM_DEVICE * sizeof(uint8_t *));
+  memset((void *)phost->Pipes, 0, USBH_MAX_PIPES_NBR * sizeof(uint32_t *));
+  memset(phost->address, 0, USBH_MAX_NUM_DEVICE * sizeof(uint8_t *));
   
   /* Restore default states and prepare EP0 */ 
   DeInitStateMachine(phost);
@@ -122,7 +158,7 @@ USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, void (*pUsrFunc)(USBH_H
 #if defined (USBH_PROCESS_STACK_SIZE)
   osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, USBH_PROCESS_STACK_SIZE);
 #else
-  osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, 8 * configMINIMAL_STACK_SIZE);
+  osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, 128 * configMINIMAL_STACK_SIZE);
 #endif  
   phost->thread = osThreadCreate (osThread(USBH_Thread), phost);
 #endif  
@@ -161,6 +197,9 @@ static USBH_StatusTypeDef  DeInitStateMachine(USBH_HandleTypeDef *phost)
 {
   uint32_t i = 0;
 
+  if(phost->is_child)
+  	return USBH_OK;  
+
   /* Clear Pipes flags*/
   for ( ; i < USBH_MAX_PIPES_NBR; i++)
   {
@@ -180,7 +219,8 @@ static USBH_StatusTypeDef  DeInitStateMachine(USBH_HandleTypeDef *phost)
   phost->Control.state = CTRL_SETUP;
   phost->Control.pipe_size = USBH_MPS_DEFAULT;  
   phost->Control.errorcount = 0;
-  
+
+  phost->address[phost->device.address - 1] = 0;
   phost->device.address = USBH_ADDRESS_DEFAULT;
   phost->device.speed   = USBH_SPEED_FULL;
   
@@ -333,6 +373,9 @@ uint8_t  USBH_FindInterfaceIndex(USBH_HandleTypeDef *phost, uint8_t interface_nu
   */
 USBH_StatusTypeDef  USBH_Start  (USBH_HandleTypeDef *phost)
 {
+  if(phost->is_child)
+  	return USBH_OK;  
+
   /* Start the low level driver  */
   USBH_LL_Start(phost);
   
@@ -350,6 +393,9 @@ USBH_StatusTypeDef  USBH_Start  (USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef  USBH_Stop   (USBH_HandleTypeDef *phost)
 {
+  if(phost->is_child)
+  	return USBH_OK;  
+
   /* Stop and cleanup the low level driver  */
   USBH_LL_Stop(phost);  
   
@@ -403,8 +449,11 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     
   __PRINT_LOG__(__DEBUG_LEVEL__, "gState: %d\r\n", phost->gState);
 
-  ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_HPRTINT;
-  //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_DISCINT;
+  if(NULL != phost->pData)
+  {
+    ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_HPRTINT;
+    //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK &= ~USB_OTG_GINTSTS_DISCINT;
+  }
   
   switch (phost->gState)
   {
@@ -602,7 +651,17 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     }
     break;       
 
-  case HOST_DEV_DISCONNECTED :  
+  case HOST_DEV_DISCONNECTED : 
+
+    /*for(idx = 0; idx < USBH_MAX_NUM_CHILD; ++idx)
+	{
+	  if(phost->children[idx])
+	  {
+	    phost->children[idx]->pActiveClass->DeInit(phost); 
+		phost->children[idx]->pActiveClass = NULL;
+	  }	
+	  //DeInitStateMachine(phost->children[idx]);
+	} */
 
     /* Re-Initilaize Host for new Enumeration */
     if(phost->pActiveClass != NULL)
@@ -620,13 +679,15 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     break;
   }
 
-  //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_DISCINT;
-  ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_HPRTINT;
+  if(NULL != phost->pData)
+  {
+    //((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_DISCINT;
+    ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_HPRTINT;
+  }
   
  return USBH_OK;  
 }
 
-CTRL_StateTypeDef last_ctrl_status = CTRL_IDLE;
 
 /**
   * @brief  USBH_HandleEnum 
@@ -638,6 +699,12 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
 {
   USBH_StatusTypeDef Status = USBH_BUSY;  
   USBH_StatusTypeDef tmpStatus = USBH_BUSY; 
+  uint8_t			 address = 0;
+
+  /*while(phost->parent)
+  {
+    phost = phost->parent;
+  }*/
     
   __PRINT_LOG__(__DEBUG_LEVEL__, "EnumState: %d\r\n", phost->EnumState);
   
@@ -650,7 +717,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
       phost->Control.pipe_size = phost->device.DevDesc.bMaxPacketSize;
 
       phost->EnumState = ENUM_GET_FULL_DEV_DESC;
-	  last_ctrl_status = CTRL_IDLE;
+	  phost->last_ctrl_status = CTRL_IDLE;
       
       /* modify control channels configuration for MaxPacket size */
       USBH_OpenPipe (phost,
@@ -673,9 +740,9 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
     }
     else
     {
-      if(last_ctrl_status != CTRL_IDLE && last_ctrl_status == phost->Control.state)
+      if(phost->last_ctrl_status != CTRL_IDLE && phost->last_ctrl_status == phost->Control.state)
       {
-        last_ctrl_status = CTRL_IDLE;
+        phost->last_ctrl_status = CTRL_IDLE;
 		__PRINT_LOG__(__ERR_LEVEL__, "ENUM failed(%d), reset to idle!!!\r\n", phost->Control.state);
 		Status = USBH_FAIL;
 #if (USBH_USE_OS == 1)
@@ -685,9 +752,10 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
       }
 	  else
 	  {
-	    last_ctrl_status = phost->Control.state;
-		__PRINT_LOG__(__ERR_LEVEL__, "USBH_Get_DevDesc failed(%d)\r\n", tmpStatus);
-	  }      
+	    phost->last_ctrl_status = phost->Control.state;
+		USBH_Delay(1);
+		//__PRINT_LOG__(__ERR_LEVEL__, "USBH_Get_DevDesc failed(%d)\r\n", tmpStatus);
+	  }
     }
     break;
     
@@ -708,10 +776,21 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
    
   case ENUM_SET_ADDR: 
     /* set address */
-    if ( USBH_SetAddress(phost, USBH_DEVICE_ADDRESS) == USBH_OK)
+    if(0 == (address = USBH_Get_One_Address(phost)))
+	{
+	  USBH_UsrLog("Address get failed!.");
+	  Status = USBH_FAIL;
+	  break;
+	}
+	/*else
+	{
+	  USBH_UsrLog("Address get %d!.", phost->device.address);
+	}*/
+	
+    if ( USBH_SetAddress(phost, phost->device.address) == USBH_OK)
     {
       USBH_Delay(2);
-      phost->device.address = USBH_DEVICE_ADDRESS;
+      //phost->device.address = USBH_DEVICE_ADDRESS;
       
       /* user callback for device address assigned */
       USBH_UsrLog("Address (#%d) assigned.", phost->device.address);
@@ -867,8 +946,18 @@ void  USBH_HandleSof  (USBH_HandleTypeDef *phost)
 {
   if((phost->gState == HOST_CLASS)&&(phost->pActiveClass != NULL))
   {
+    int i = 0;
     phost->pActiveClass->SOFProcess(phost);
+	for(i = 0; i < USBH_MAX_NUM_CHILD; ++i)
+	{
+	  if(NULL != phost->children[i])
+	  	USBH_HandleSof(phost->children[i]);
+	}
   }
+  /*if((phost->gState == HOST_CLASS)&&(phost->pActiveClass != NULL))
+  {
+    phost->pActiveClass->SOFProcess(phost);
+  }*/
 }
 
 /**
@@ -947,7 +1036,16 @@ USBH_StatusTypeDef  USBH_LL_Connect  (USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
 {
+  int idx;
   phost->device.is_connected = 0; 
+
+  /*for(idx = 0; idx < USBH_MAX_NUM_CHILD; ++idx)
+  {
+	if(phost->children[idx])
+	{
+	  phost->children[idx]->pUser(phost->children[idx], HOST_USER_DISCONNECTION); 
+	}	
+  }*/
   
   if(phost->pUser != NULL)
   {    
@@ -983,6 +1081,40 @@ USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
 
 
 #if (USBH_USE_OS == 1)  
+static void USBH_Children_Process_OS(USBH_HandleTypeDef * phost)
+{
+  int i;
+  for(i = 0; i < USBH_MAX_NUM_CHILD; ++i)
+  {
+    USBH_HandleTypeDef * children = phost->children[i];
+  	if(NULL != children)
+  	{
+  	  /* Open Control pipes */
+		USBH_OpenPipe (children,
+		               children->Control.pipe_in,
+		               0x80,
+		               children->device.address,
+		               children->device.speed,
+		               USBH_EP_CONTROL,
+		               children->Control.pipe_size); 
+
+		/* Open Control pipes */
+		USBH_OpenPipe (children,
+		               children->Control.pipe_out,
+		               0x00,
+		               children->device.address,
+		               children->device.speed,
+		               USBH_EP_CONTROL,
+		               children->Control.pipe_size);
+		
+  	  //__PRINT_LOG__(__CRITICAL_LEVEL__, "children[%d]++++++++++++++++++++++\r\n", i);
+      USBH_Process(children);
+	  USBH_Children_Process_OS(children);
+  	}
+  }  
+}
+
+
 /**
   * @brief  USB Host Thread task
   * @param  pvParameters not used
@@ -998,7 +1130,11 @@ static void USBH_Process_OS(void const * argument)
     
     if( event.status == osEventMessage )
     {
+	  //USBH_HandleTypeDef * phost = (USBH_HandleTypeDef *)argument;
+	  
       USBH_Process((USBH_HandleTypeDef *)argument);
+	  USBH_Children_Process_OS((USBH_HandleTypeDef *)argument);
+	  
     }
    }
 }

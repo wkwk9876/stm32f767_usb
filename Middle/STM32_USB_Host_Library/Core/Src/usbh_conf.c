@@ -228,6 +228,9 @@ USBH_StatusTypeDef USBH_LL_Init(USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef USBH_LL_DeInit(USBH_HandleTypeDef *phost)
 {
+  if(1 == phost->is_child || NULL == phost->pData)
+  	return USBH_OK;
+  
   HAL_HCD_DeInit(phost->pData);
   return USBH_OK;
 }
@@ -239,6 +242,9 @@ USBH_StatusTypeDef USBH_LL_DeInit(USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef USBH_LL_Start(USBH_HandleTypeDef *phost)
 {
+  if(1 == phost->is_child || NULL == phost->pData)
+  	return USBH_OK;
+  
   HAL_HCD_Start(phost->pData);
   return USBH_OK;
 }
@@ -250,6 +256,9 @@ USBH_StatusTypeDef USBH_LL_Start(USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef USBH_LL_Stop(USBH_HandleTypeDef *phost)
 {
+  if(1 == phost->is_child || NULL == phost->pData)
+  	return USBH_OK;
+  
   HAL_HCD_Stop(phost->pData);
   return USBH_OK;
 }
@@ -291,6 +300,9 @@ USBH_SpeedTypeDef USBH_LL_GetSpeed(USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef USBH_LL_ResetPort (USBH_HandleTypeDef *phost)
 {
+  if(1 == phost->is_child || NULL == phost->pData)
+  	return USBH_OK;
+  
   HAL_HCD_ResetPort(phost->pData);
   return USBH_OK;
 }
@@ -303,6 +315,9 @@ USBH_StatusTypeDef USBH_LL_ResetPort (USBH_HandleTypeDef *phost)
   */
 uint32_t USBH_LL_GetLastXferSize(USBH_HandleTypeDef *phost, uint8_t pipe)
 {
+  //if(1 == phost->is_child && NULL == phost->pData)
+  //	phost = phost->parent;
+
   return HAL_HCD_HC_GetXferCount(phost->pData, pipe);
 }
 
@@ -325,6 +340,9 @@ USBH_StatusTypeDef USBH_LL_OpenPipe(USBH_HandleTypeDef *phost,
                                     uint8_t ep_type,
                                     uint16_t mps)
 {
+  //if(1 == phost->is_child && NULL == phost->pData)
+  //	phost = phost->parent;
+  
   HAL_HCD_HC_Init(phost->pData,
                   pipe,
                   epnum,
@@ -343,6 +361,9 @@ USBH_StatusTypeDef USBH_LL_OpenPipe(USBH_HandleTypeDef *phost,
   */
 USBH_StatusTypeDef USBH_LL_ClosePipe(USBH_HandleTypeDef *phost, uint8_t pipe)
 {
+  //if(1 == phost->is_child && NULL == phost->pData)
+  //	phost = phost->parent;
+  
   HAL_HCD_HC_Halt(phost->pData, pipe);
   return USBH_OK;
 }
@@ -383,7 +404,9 @@ USBH_StatusTypeDef USBH_LL_SubmitURB(USBH_HandleTypeDef *phost,
                                      uint16_t length,
                                      uint8_t do_ping)
 {
-
+  //if(1 == phost->is_child && NULL == phost->pData)
+  //	phost = phost->parent;
+  
   if(NULL == phost || NULL == phost->pData || 0 == phost->device.is_connected)
   	return USBH_FAIL;
 
@@ -414,6 +437,13 @@ USBH_StatusTypeDef USBH_LL_SubmitURB(USBH_HandleTypeDef *phost,
   */
 USBH_URBStateTypeDef USBH_LL_GetURBState(USBH_HandleTypeDef *phost, uint8_t pipe)
 {
+  //if(1 == phost->is_child && NULL == phost->pData)
+  //	phost = phost->parent;
+  while(phost->parent)
+  {
+    phost = phost->parent;
+  }
+  
   return (USBH_URBStateTypeDef)HAL_HCD_HC_GetURBState (phost->pData, pipe);
 }
 
@@ -428,6 +458,9 @@ USBH_URBStateTypeDef USBH_LL_GetURBState(USBH_HandleTypeDef *phost, uint8_t pipe
   */
 USBH_StatusTypeDef USBH_LL_DriverVBUS(USBH_HandleTypeDef *phost, uint8_t state)
 {
+  if(1 == phost->is_child || NULL == phost->pData)
+  	return USBH_OK;
+  
   if(state == 0)
   {
     HAL_GPIO_WritePin(GPIOG, GPIO_PIN_6, GPIO_PIN_RESET);

@@ -15,8 +15,6 @@
 
 //#define	USB_HOST_MAX_NUM		2
 
-//#define RECV_BUFF_SIZE			(512)
-//#define LOG_BUFF_SIZE			(1 << 20)
 
 extern Usb_Application_Class app_ch340;
 
@@ -26,16 +24,6 @@ Usb_Application_Class * AppClass[] =
 	&app_ch340,
 };
 
-
-//ApplicationTypeDef Appli_state = APPLICATION_IDLE;
-//char USBDISKPath[4];            /* USB Host logical drive path */
-//osMessageQId AppliEvent;
-//char recv_buf[RECV_BUFF_SIZE + 1];
-//volatile unsigned char	g_stop_flag = 0;
-
-//CDC_LOG_BUFF_STATE log_buf;
-//unsigned int rx_total_num = 0;
-//unsigned int tx_total_num = 0;
 
 
 /*void Delay(__IO uint32_t nCount)
@@ -61,16 +49,6 @@ static int get_activeclass_app(USBH_HandleTypeDef * phost)
 	return -1;
 }
 
-
-
-/*static void TEST_Task(void const *argument)
-{
-    while(1)
-    {
-        __PRINT_LOG__(__CRITICAL_LEVEL__, "++++++++++++++++\r\n");
-        delay_ms(1000);
-    }
-}*/
 
 static void USBH_UserProcess(USBH_HandleTypeDef * phost, uint8_t id)
 {
