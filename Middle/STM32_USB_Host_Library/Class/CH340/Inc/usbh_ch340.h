@@ -406,12 +406,13 @@ typedef struct _CDC_Process
   uint32_t                           RxDataLength;  
   CDC_InterfaceDesc_Typedef         CDC_Desc;
   CDC_LineCodingTypeDef             LineCoding;
-  CDC_LineCodingTypeDef             *pUserLineCoding;  
+  CDC_LineCodingTypeDef    			*pUserLineCoding;  
   CDC_StateTypeDef                  state;
   CDC_DataStateTypeDef              data_tx_state;
   CDC_DataStateTypeDef              data_rx_state; 
   uint8_t                           Rx_Poll;
   CH340_AttachStateTypeDef			attach_state;
+  unsigned char 					buf[8];
 }
 CDC_HandleTypeDef;
 

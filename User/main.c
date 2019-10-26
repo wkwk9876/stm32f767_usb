@@ -342,7 +342,7 @@ int main()
     SystemClock_Config(25, 432, 2, 9);
     
     delay_init(216);       
-    uart_init(115200);
+    uart_init(921600);//(115200);
     SDRAM_Init();
     PCF8574_Init();
     

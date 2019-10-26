@@ -754,7 +754,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
 	  {
 	    phost->last_ctrl_status = phost->Control.state;
 		USBH_Delay(1);
-		//__PRINT_LOG__(__ERR_LEVEL__, "USBH_Get_DevDesc failed(%d)\r\n", tmpStatus);
+		__PRINT_LOG__(__INFO_LEVEL__, "USBH_Get_DevDesc failed(%d)\r\n", tmpStatus);
 	  }
     }
     break;
@@ -778,7 +778,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
     /* set address */
     if(0 == (address = USBH_Get_One_Address(phost)))
 	{
-	  USBH_UsrLog("Address get failed!.");
+	  USBH_UsrLog("Address get failed!(%d).", address);
 	  Status = USBH_FAIL;
 	  break;
 	}
@@ -1036,7 +1036,7 @@ USBH_StatusTypeDef  USBH_LL_Connect  (USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
 {
-  int idx;
+  //int idx;
   phost->device.is_connected = 0; 
 
   /*for(idx = 0; idx < USBH_MAX_NUM_CHILD; ++idx)
@@ -1081,14 +1081,15 @@ USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
 
 
 #if (USBH_USE_OS == 1)  
-static void USBH_Children_Process_OS(USBH_HandleTypeDef * phost)
+static void USBH_Children_Process_OS(volatile USBH_HandleTypeDef * phost)
 {
   int i;
   for(i = 0; i < USBH_MAX_NUM_CHILD; ++i)
   {
-    USBH_HandleTypeDef * children = phost->children[i];
+    volatile USBH_HandleTypeDef * children = phost->children[i];
   	if(NULL != children)
   	{
+#if 0
   	  /* Open Control pipes */
 		USBH_OpenPipe (children,
 		               children->Control.pipe_in,
@@ -1098,6 +1099,7 @@ static void USBH_Children_Process_OS(USBH_HandleTypeDef * phost)
 		               USBH_EP_CONTROL,
 		               children->Control.pipe_size); 
 
+
 		/* Open Control pipes */
 		USBH_OpenPipe (children,
 		               children->Control.pipe_out,
@@ -1106,14 +1108,14 @@ static void USBH_Children_Process_OS(USBH_HandleTypeDef * phost)
 		               children->device.speed,
 		               USBH_EP_CONTROL,
 		               children->Control.pipe_size);
-		
+#endif
+
   	  //__PRINT_LOG__(__CRITICAL_LEVEL__, "children[%d]++++++++++++++++++++++\r\n", i);
-      USBH_Process(children);
+      USBH_Process((USBH_HandleTypeDef *)children);
 	  USBH_Children_Process_OS(children);
   	}
   }  
 }
-
 
 /**
   * @brief  USB Host Thread task
@@ -1131,10 +1133,10 @@ static void USBH_Process_OS(void const * argument)
     if( event.status == osEventMessage )
     {
 	  //USBH_HandleTypeDef * phost = (USBH_HandleTypeDef *)argument;
+	  //HCD_HandleTypeDef * hhcd = (HCD_HandleTypeDef *)phost->pData;
 	  
       USBH_Process((USBH_HandleTypeDef *)argument);
 	  USBH_Children_Process_OS((USBH_HandleTypeDef *)argument);
-	  
     }
    }
 }

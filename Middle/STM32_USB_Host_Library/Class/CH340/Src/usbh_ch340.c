@@ -30,7 +30,7 @@
 #include "systemlog.h"
 
 
-#define USBH_CH340_BUFFER_SIZE                 1024
+
 
 
 /** @addtogroup USBH_LIB
@@ -239,10 +239,9 @@ static int ch34x_get_baud_rate( unsigned int baud_rate,
 }
 
 
-static USBH_StatusTypeDef ch34x_attach( USBH_HandleTypeDef *phost )
+static USBH_StatusTypeDef ch34x_attach( USBH_HandleTypeDef *phost)
 {	
 	CDC_HandleTypeDef *CDC_Handle = NULL;
-	char buf[8];
 	USBH_StatusTypeDef status = USBH_BUSY;
 
 	if(NULL == phost || NULL == phost->pClassData[0])
@@ -262,7 +261,7 @@ static USBH_StatusTypeDef ch34x_attach( USBH_HandleTypeDef *phost )
 	{
 	case CH340_READ_VENDOR_VERSION_STATE:
 		if(USBH_OK == ch34x_vendor_read( VENDOR_VERSION, 0x0000, 0x0000,
-			phost, (unsigned char *)buf, 0x02 ))
+			phost, CDC_Handle->buf, 0x02 ))
 		{
 			CDC_Handle->attach_state = CH340_VENDOR_SERIAL_INIT_STATE;
 		}
@@ -290,7 +289,7 @@ static USBH_StatusTypeDef ch34x_attach( USBH_HandleTypeDef *phost )
 		break;
 	case CH340_VENDOR_READ_1_STATE:
 		if(USBH_OK == ch34x_vendor_read( VENDOR_READ, 0x2518, 0x0000,
-			phost, (unsigned char *)buf, 0x02 ))
+			phost, CDC_Handle->buf, 0x02 ))
 		{
 			CDC_Handle->attach_state = CH340_VENDOR_WRITE_3_STATE;
 		}
@@ -505,14 +504,19 @@ USBH_StatusTypeDef USBH_CH340_InterfaceDeInit (USBH_HandleTypeDef *phost)
 {
   CDC_HandleTypeDef *CDC_Handle =	(CDC_HandleTypeDef*) phost->pClassData[0]; 
   //CDC_HandleTypeDef *CDC_Handle =  (CDC_HandleTypeDef*) phost->pActiveClass->pData;
-  
+
+  while(NULL != phost->app_data)
+  {
+	USBH_Delay(10);
+  }
+ 
   if ( CDC_Handle->CommItf.NotifPipe)
   {
     USBH_ClosePipe(phost, CDC_Handle->CommItf.NotifPipe);
     USBH_FreePipe  (phost, CDC_Handle->CommItf.NotifPipe);
     CDC_Handle->CommItf.NotifPipe = 0;     /* Reset the Channel as Free */
   }
-  
+
   if ( CDC_Handle->DataItf.InPipe)
   {
     USBH_ClosePipe(phost, CDC_Handle->DataItf.InPipe);
@@ -582,8 +586,12 @@ static USBH_StatusTypeDef USBH_CH340_Process (USBH_HandleTypeDef *phost)
 {
   USBH_StatusTypeDef status = USBH_BUSY;
   USBH_StatusTypeDef req_status = USBH_OK;
-  CDC_HandleTypeDef *CDC_Handle =	(CDC_HandleTypeDef*) phost->pClassData[0]; 
-  //CDC_HandleTypeDef *CDC_Handle =  (CDC_HandleTypeDef*) phost->pActiveClass->pData; 
+  CDC_HandleTypeDef *CDC_Handle =	NULL;//(CDC_HandleTypeDef*) phost->pClassData[0]; 
+  //CDC_HandleTypeDef *CDC_Handle =  (CDC_HandleTypeDef*) phost->pActiveClass->pData;
+  
+  if(NULL == phost || NULL == phost->pClassData[0])
+  	return USBH_OK;
+  CDC_Handle = (CDC_HandleTypeDef*) phost->pClassData[0]; 
 
   __PRINT_LOG__(__INFO_LEVEL__, "CDC_Handle->state: %d!\r\n", CDC_Handle->state);
   

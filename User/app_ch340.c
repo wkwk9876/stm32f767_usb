@@ -336,13 +336,13 @@ USBH_StatusTypeDef delete_CH340_Application(USBH_HandleTypeDef *phost)
 		__PRINT_LOG__(__CRITICAL_LEVEL__, "app_data is null!\r\n");
 	}
 
-	phost->app_data = NULL;
-
 	free_sdram(app_data->log_buf.buf);
 	app_data->log_buf.buf = NULL;
 	osMessageDelete(app_data->AppliEvent);
 	free(app_data);
 	app_data = NULL;
+
+	phost->app_data = NULL;
 
 	return USBH_OK;
 }

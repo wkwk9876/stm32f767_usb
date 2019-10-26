@@ -73,6 +73,7 @@ typedef enum
 	HUB_REQ_GET_HUB_STATUS,
 	HUB_REQ_SET_PORT_POWER,
 	HUB_REQ_SCAN_PORT,
+	HUB_REQ_SCAN_PORT_WAIT,
 }
 HUB_CtlStateTypeDef;
 
@@ -84,6 +85,7 @@ typedef struct
   uint8_t              NotifEp;
   uint8_t              buff[8];
   uint16_t             NotifEpSize;
+  uint8_t              poll; 
 }
 HUB_CommItfTypedef ;
 
@@ -121,29 +123,40 @@ typedef struct __attribute__ ((packed)) usb_hub_status {
 
 typedef struct __attribute__ ((packed)) _USB_HUB_PORT_STATUS
 {
-	struct __attribute__ ((packed)) _port_status{
-		uint8_t     PORT_CONNECTION      : 1;
-		uint8_t     PORT_ENABLE          : 1;
-		uint8_t     PORT_SUSPEND         : 1;
-		uint8_t     PORT_OVER_CURRENT    : 1;
-		uint8_t     PORT_RESET           : 1;
-		uint8_t     RESERVED_1           : 3;
-		uint8_t     PORT_POWER           : 1;
-		uint8_t     PORT_LOW_SPEED       : 1;
-		uint8_t     PORT_HIGH_SPEED      : 1;
-		uint8_t     PORT_TEST            : 1;
-		uint8_t     PORT_INDICATOR       : 1;
-		uint8_t     RESERVED_2           : 3;
-	}wPortStatus;
-	struct __attribute__ ((packed)) _port_change{
-		uint8_t     C_PORT_CONNECTION    : 1;
-		uint8_t     C_PORT_ENABLE        : 1;
-		uint8_t     C_PORT_SUSPEND       : 1;
-		uint8_t     C_PORT_OVER_CURRENT  : 1;
-		uint8_t     C_PORT_RESET         : 1;
-		uint8_t     RESERVED_1           : 3;
-		uint8_t     RESERVED_2;
-	}wPortChange;
+	union __attribute__ ((packed))
+    {
+		struct __attribute__ ((packed))
+		{
+			uint8_t     PORT_CONNECTION      : 1;
+			uint8_t     PORT_ENABLE          : 1;
+			uint8_t     PORT_SUSPEND         : 1;
+			uint8_t     PORT_OVER_CURRENT    : 1;
+			uint8_t     PORT_RESET           : 1;
+			uint8_t     RESERVED_1           : 3;
+			uint8_t     PORT_POWER           : 1;
+			uint8_t     PORT_LOW_SPEED       : 1;
+			uint8_t     PORT_HIGH_SPEED      : 1;
+			uint8_t     PORT_TEST            : 1;
+			uint8_t     PORT_INDICATOR       : 1;
+			uint8_t     RESERVED_2           : 3;
+		}wPortStatus;
+		uint16_t val;
+	}val1;
+
+	union __attribute__ ((packed))
+    {
+		struct __attribute__ ((packed))
+		{
+			uint8_t     C_PORT_CONNECTION    : 1;
+			uint8_t     C_PORT_ENABLE        : 1;
+			uint8_t     C_PORT_SUSPEND       : 1;
+			uint8_t     C_PORT_OVER_CURRENT  : 1;
+			uint8_t     C_PORT_RESET         : 1;
+			uint8_t     RESERVED_1           : 3;
+			uint8_t     RESERVED_2;
+		}wPortChange;
+		uint16_t val;
+	}val2;
 }HUB_PortStatus;
 
 
@@ -161,6 +174,7 @@ typedef struct _HUB_Process
 	uint8_t								port_index;
 	uint8_t								hub_intr_buf[64];
 	volatile unsigned char 				port_state;
+	volatile unsigned char 				port_state_last;
 	unsigned int 						sof_num;
 
   uint8_t              OutPipe; 
