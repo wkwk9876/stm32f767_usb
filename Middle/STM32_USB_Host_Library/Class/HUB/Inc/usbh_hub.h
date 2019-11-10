@@ -74,6 +74,7 @@ typedef enum
 	HUB_REQ_SET_PORT_POWER,
 	HUB_REQ_SCAN_PORT,
 	HUB_REQ_SCAN_PORT_WAIT,
+	HUB_REQ_ENUM_PORT,
 }
 HUB_CtlStateTypeDef;
 
@@ -174,7 +175,6 @@ typedef struct _HUB_Process
 	uint8_t								port_index;
 	uint8_t								hub_intr_buf[64];
 	volatile unsigned char 				port_state;
-	volatile unsigned char 				port_state_last;
 	unsigned int 						sof_num;
 
   uint8_t              OutPipe; 

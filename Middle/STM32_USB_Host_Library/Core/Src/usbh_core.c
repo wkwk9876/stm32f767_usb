@@ -532,13 +532,16 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
       {
         phost->gState  = HOST_INPUT; 
       }
-          
+	     
     }
 	else if(enum_status == USBH_FAIL)
 	{
-	  USBH_ReEnumerate(phost);
-	  //phost->gState = HOST_IDLE;
-	  //USBH_LL_Disconnect(phost);
+	  if(NULL == phost->parent)
+  	  {
+	    USBH_ReEnumerate(phost);
+	    //phost->gState = HOST_IDLE;
+	    //USBH_LL_Disconnect(phost);
+	  }
 	}
     break;
     
@@ -685,7 +688,11 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     ((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance)->GINTMSK |= USB_OTG_GINTSTS_HPRTINT;
   }
   
- return USBH_OK;  
+  if(NULL != phost->parent)
+  {
+    return enum_status;
+  }
+  return USBH_OK;  
 }
 
 

@@ -136,7 +136,7 @@ static USBH_StatusTypeDef ch34x_vendor_read(unsigned char request,
 		unsigned char *buf,
 		unsigned short len )
 {
-  USBH_StatusTypeDef retval;
+  USBH_StatusTypeDef retval = USBH_BUSY;
 
   if(NULL == phost)
 		return USBH_FAIL;
@@ -149,7 +149,7 @@ static USBH_StatusTypeDef ch34x_vendor_read(unsigned char request,
   phost->Control.setup.b.wIndex.w = index;
 
   phost->Control.setup.b.wLength.w = len;
-  
+
   retval = USBH_CtlReq(phost, buf , len);
 
   __PRINT_LOG__(__INFO_LEVEL__, "0x%x:0x%x:0x%x:0x%x %d - %d", 
@@ -165,7 +165,7 @@ static USBH_StatusTypeDef ch34x_vendor_write(unsigned char request,
 		unsigned char *buf,
 		unsigned short len )
 {
-  USBH_StatusTypeDef retval;
+  USBH_StatusTypeDef retval = USBH_BUSY;
 
   if(NULL == phost)
 		return USBH_FAIL;
@@ -178,7 +178,7 @@ static USBH_StatusTypeDef ch34x_vendor_write(unsigned char request,
   phost->Control.setup.b.wIndex.w = index;
 
   phost->Control.setup.b.wLength.w = len;
-  
+
   retval = USBH_CtlReq(phost, buf , len);
 
   return retval;
@@ -352,7 +352,7 @@ static USBH_StatusTypeDef USBH_CH340_InterfaceInit (USBH_HandleTypeDef *phost)
 		CDC_Handle->CommItf.NotifEp = phost->device.CfgDesc.Itf_Desc[interface].Ep_Desc[2].bEndpointAddress;
 		CDC_Handle->CommItf.NotifEpSize  = phost->device.CfgDesc.Itf_Desc[interface].Ep_Desc[2].wMaxPacketSize;
 	  }
-	  
+#if 0	  
 	  /*Allocate the length for host channel number in*/
 	  CDC_Handle->CommItf.NotifPipe = USBH_AllocPipe(phost, CDC_Handle->CommItf.NotifEp);
 	  
@@ -366,7 +366,7 @@ static USBH_StatusTypeDef USBH_CH340_InterfaceInit (USBH_HandleTypeDef *phost)
 					  CDC_Handle->CommItf.NotifEpSize); 
 	  
 	  USBH_LL_SetToggle (phost, CDC_Handle->CommItf.NotifPipe, 0);	 
-
+#endif
 	  /*Collect the class specific endpoint address and length*/
 	  if(phost->device.CfgDesc.Itf_Desc[interface].Ep_Desc[0].bEndpointAddress & 0x80)
 	  {	   
@@ -395,7 +395,7 @@ static USBH_StatusTypeDef USBH_CH340_InterfaceInit (USBH_HandleTypeDef *phost)
       
 	  /*Allocate the length for host channel number in*/
 	  CDC_Handle->DataItf.InPipe = USBH_AllocPipe(phost, CDC_Handle->DataItf.InEp);  
-      
+     
 	  /* Open channel for OUT endpoint */
 	  USBH_OpenPipe  (phost,
 	  				CDC_Handle->DataItf.OutPipe,
@@ -403,7 +403,8 @@ static USBH_StatusTypeDef USBH_CH340_InterfaceInit (USBH_HandleTypeDef *phost)
 	  				phost->device.address,
 	  				phost->device.speed,
 	  				USB_EP_TYPE_BULK,
-	  				CDC_Handle->DataItf.OutEpSize);  
+	  				CDC_Handle->DataItf.OutEpSize); 
+
 	  /* Open channel for IN endpoint */
 	  USBH_OpenPipe  (phost,
 	  				CDC_Handle->DataItf.InPipe,
@@ -419,8 +420,6 @@ static USBH_StatusTypeDef USBH_CH340_InterfaceInit (USBH_HandleTypeDef *phost)
 	  USBH_LL_SetToggle  (phost, CDC_Handle->DataItf.OutPipe,0);
 	  USBH_LL_SetToggle  (phost, CDC_Handle->DataItf.InPipe,0);	  
 	  status = USBH_OK; 
-
-
 
 #if 0
 	  interface = USBH_FindInterface(phost, 
@@ -510,21 +509,21 @@ USBH_StatusTypeDef USBH_CH340_InterfaceDeInit (USBH_HandleTypeDef *phost)
 	USBH_Delay(10);
   }
  
-  if ( CDC_Handle->CommItf.NotifPipe)
+  if (CDC_Handle->CommItf.NotifPipe && 0xff != CDC_Handle->CommItf.NotifPipe)
   {
     USBH_ClosePipe(phost, CDC_Handle->CommItf.NotifPipe);
     USBH_FreePipe  (phost, CDC_Handle->CommItf.NotifPipe);
     CDC_Handle->CommItf.NotifPipe = 0;     /* Reset the Channel as Free */
   }
 
-  if ( CDC_Handle->DataItf.InPipe)
+  if (CDC_Handle->DataItf.InPipe && 0xff != CDC_Handle->DataItf.InPipe)
   {
     USBH_ClosePipe(phost, CDC_Handle->DataItf.InPipe);
     USBH_FreePipe  (phost, CDC_Handle->DataItf.InPipe);
     CDC_Handle->DataItf.InPipe = 0;     /* Reset the Channel as Free */
   }
   
-  if ( CDC_Handle->DataItf.OutPipe)
+  if (CDC_Handle->DataItf.OutPipe && 0xff != CDC_Handle->DataItf.OutPipe)
   {
     USBH_ClosePipe(phost, CDC_Handle->DataItf.OutPipe);
     USBH_FreePipe  (phost, CDC_Handle->DataItf.OutPipe);
@@ -572,6 +571,7 @@ static USBH_StatusTypeDef USBH_CH340_ClassRequest (USBH_HandleTypeDef *phost)
   {
     phost->pUser(phost, HOST_USER_CLASS_ACTIVE); 
   }
+
   return status;
 }
 
@@ -639,8 +639,7 @@ static USBH_StatusTypeDef USBH_CH340_Process (USBH_HandleTypeDef *phost)
       {
         USBH_CDC_LineCodingChanged(phost);
       }
-    }
-    
+    }    
     else if(req_status != USBH_BUSY)
     {
       CDC_Handle->state = CDC_ERROR_STATE; 

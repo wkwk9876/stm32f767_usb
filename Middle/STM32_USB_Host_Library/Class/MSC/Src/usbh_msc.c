@@ -255,11 +255,13 @@ USBH_StatusTypeDef USBH_MSC_InterfaceDeInit (USBH_HandleTypeDef *phost)
     MSC_Handle->InPipe = 0;     /* Reset the Channel as Free */
   } 
 
-  if(phost->pActiveClass->pData)
+  USBH_Free_One_Address(phost);
+
+  /*if(phost->pActiveClass->pData)
   {
     USBH_free (phost->pActiveClass->pData);
     phost->pActiveClass->pData = 0;
-  }
+  }*/
   
   return USBH_OK;
 }
