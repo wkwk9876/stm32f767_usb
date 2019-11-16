@@ -588,7 +588,7 @@ static USBH_StatusTypeDef USBH_HUB_Process (USBH_HandleTypeDef *phost)
 			tmp_port_state = HUB_Handle->port_state;
 			
 			//__PRINT_LOG__(__CRITICAL_LEVEL__, "get tmp_port_state %x\r\n",  tmp_port_state);
-			tmp_port_state &= 0x0f;
+			//tmp_port_state &= 0x0f;
 		
 			while(tmp_port_state)
 			{
