@@ -55,6 +55,7 @@
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 extern HCD_HandleTypeDef hhcd;
+extern ETH_HandleTypeDef EthHandle;
 /******************************************************************************/
 /*            Cortex-M7 Processor Exceptions Handlers                         */
 /******************************************************************************/
@@ -174,6 +175,15 @@ void OTG_FS_IRQHandler(void)
   HAL_HCD_IRQHandler(&hhcd);
 }
 
+/**
+  * @brief  This function handles Ethernet interrupt request.
+  * @param  None
+  * @retval None
+  */
+void ETH_IRQHandler(void)
+{
+  HAL_ETH_IRQHandler(&EthHandle);
+}
 
 /******************************************************************************/
 /*                 STM32F7xx Peripherals Interrupt Handlers                   */

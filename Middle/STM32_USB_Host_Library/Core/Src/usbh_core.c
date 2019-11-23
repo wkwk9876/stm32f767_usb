@@ -674,6 +674,13 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     }     
 
 	DeInitStateMachine(phost);
+
+	/*if(0 == phost->device.PortEnabled || NULL != phost->pData)
+	{
+		USB_DriveVbus((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance, 0);
+		USBH_Delay(200); 
+		USB_DriveVbus((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance, 1);
+	}*/
 	
     break;
     
@@ -990,6 +997,14 @@ void USBH_LL_PortDisabled (USBH_HandleTypeDef *phost)
 {
   phost->device.PortEnabled = 0U;
 
+  /*printf("++++++++++++USBH_LL_PortDisabled+++++++++++\r\n");
+
+  if(1 == phost->device.is_connected || NULL != phost->pData)
+  {
+    printf("++++++++++++USBH_LL_PortDisabled is_connected+++++++++++\r\n");
+    USB_DriveVbus((USB_OTG_GlobalTypeDef *)((HCD_HandleTypeDef *)(phost->pData))->Instance, 0);
+  }*/
+  
   return;
 }
 
