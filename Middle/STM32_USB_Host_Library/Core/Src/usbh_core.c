@@ -444,7 +444,7 @@ USBH_StatusTypeDef  USBH_ReEnumerate   (USBH_HandleTypeDef *phost)
 USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
 {
   __IO USBH_StatusTypeDef status = USBH_FAIL;
-  __IO USBH_StatusTypeDef enum_status = USBH_FAIL;
+  __IO USBH_StatusTypeDef enum_status = USBH_OK;
   uint8_t idx = 0;
     
   __PRINT_LOG__(__DEBUG_LEVEL__, "gState: %d\r\n", phost->gState);

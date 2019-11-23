@@ -150,18 +150,34 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>1145</LineNumber>
+          <LineNumber>549</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>537025730</Address>
+          <Address>537017958</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\Middle\STM32_USB_Host_Library\Core\Src\usbh_core.c</Filename>
+          <Filename>..\Middle\STM32_USB_Host_Library\Class\HUB\Src\usbh_hub.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\STM32F767_USB_HOST\../Middle/STM32_USB_Host_Library/Core/Src/usbh_core.c\1145</Expression>
+          <Expression>\\STM32F767_USB_HOST\../Middle/STM32_USB_Host_Library/Class/HUB/Src/usbh_hub.c\549</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>549</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>537018046</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\Middle\STM32_USB_Host_Library\Class\HUB\Src\usbh_hub.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\STM32F767_USB_HOST\../Middle/STM32_USB_Host_Library/Class/HUB/Src/usbh_hub.c\549</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -242,7 +258,7 @@
 
   <Group>
     <GroupName>Core</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -1710,7 +1726,7 @@
 
   <Group>
     <GroupName>FreeRTOS</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -1814,7 +1830,7 @@
 
   <Group>
     <GroupName>FreeRTOS/portable</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -1846,7 +1862,7 @@
 
   <Group>
     <GroupName>Hardware</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -1890,7 +1906,7 @@
 
   <Group>
     <GroupName>Middle/USBH/Class/CH340</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>

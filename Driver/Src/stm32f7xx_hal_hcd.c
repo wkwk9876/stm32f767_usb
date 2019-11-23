@@ -931,6 +931,10 @@ static void HCD_HC_IN_IRQHandler   (HCD_HandleTypeDef *hhcd, uint8_t chnum)
       tmpreg |= USB_OTG_HCCHAR_CHENA;
       USBx_HC(chnum)->HCCHAR = tmpreg;
     }
+    else if (hhcd->hc[chnum].ep_type == EP_TYPE_INTR)
+    {
+      hhcd->hc[chnum].urb_state = URB_NOTREADY;
+    }
     __HAL_HCD_CLEAR_HC_INT(chnum, USB_OTG_HCINT_CHH);
     HAL_HCD_HC_NotifyURBChange_Callback(hhcd, chnum, hhcd->hc[chnum].urb_state);
   }
@@ -1072,7 +1076,8 @@ static void HCD_HC_OUT_IRQHandler  (HCD_HandleTypeDef *hhcd, uint8_t chnum)
     if(hhcd->hc[chnum].state == HC_XFRC)
     {
       hhcd->hc[chnum].urb_state  = URB_DONE;
-      if (hhcd->hc[chnum].ep_type == EP_TYPE_BULK)
+      if ((hhcd->hc[chnum].ep_type == EP_TYPE_BULK) ||
+          (hhcd->hc[chnum].ep_type == EP_TYPE_INTR))
       {
         hhcd->hc[chnum].toggle_out ^= 1;
       }
@@ -1184,6 +1189,8 @@ static void HCD_Port_IRQHandler  (HCD_HandleTypeDef *hhcd)
   hprt0 = USBx_HPRT0;
   hprt0_dup = USBx_HPRT0;
 
+  printf("hprt0 :0x%08x\r\n", hprt0);
+
   hprt0_dup &= ~(USB_OTG_HPRT_PENA | USB_OTG_HPRT_PCDET |\
                  USB_OTG_HPRT_PENCHNG | USB_OTG_HPRT_POCCHNG );
 
@@ -1244,6 +1251,7 @@ static void HCD_Port_IRQHandler  (HCD_HandleTypeDef *hhcd)
   if((hprt0 & USB_OTG_HPRT_POCCHNG) == USB_OTG_HPRT_POCCHNG)
   {
     hprt0_dup |= USB_OTG_HPRT_POCCHNG;
+    printf("USB over current detected!\r\n");
   }
 
   /* Clear Port Interrupts */

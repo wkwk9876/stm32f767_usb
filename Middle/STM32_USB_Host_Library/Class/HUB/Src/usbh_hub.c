@@ -175,9 +175,9 @@ USBH_StatusTypeDef USBH_HUB_GetPortStatus (USBH_HandleTypeDef *phost, uint8_t po
 		//__PRINT_LOG__(__CRITICAL_LEVEL__, "status:%d %d\r\n", status, timeout);
 	}
 
-	if(timeout >= __TIME_OUT_COUNT__)
+	if(timeout >= __TIME_OUT_COUNT__ || USBH_OK != status)
 	{
-		__PRINT_LOG__(__CRITICAL_LEVEL__, "time out\r\n");
+		__PRINT_LOG__(__CRITICAL_LEVEL__, "time out(%d)\r\n", status);
 		phost->RequestState = CMD_SEND;
 		status = USBH_FAIL;
 	}
@@ -548,40 +548,61 @@ static USBH_StatusTypeDef USBH_HUB_Process (USBH_HandleTypeDef *phost)
 
 	switch (HUB_Handle->ctl_state)
 	{
-		case HUB_REQ_SCAN_PORT:		
+		/*case HUB_REQ_SCAN_PORT:		
 			
 			if((HUB_Handle->sof_num) >= HUB_Handle->CommItf.poll &&
 				USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe) == USBH_OK)
 			{
 				HUB_Handle->ctl_state = HUB_REQ_SCAN_PORT_WAIT;
-				//printf("sof:%d\r\n", HUB_Handle->sof_num);
+				//printf("chnum %d sof:%d\r\n", HUB_Handle->CommItf.NotifPipe, HUB_Handle->sof_num);
 				HUB_Handle->sof_num = 0;
-			}
-
-			break;
-
-		case HUB_REQ_SCAN_PORT_WAIT:
-			
-			tmp_state = USBH_LL_GetURBState(phost, HUB_Handle->InPipe);
-			if(USBH_URB_DONE == tmp_state)
-			{
-				HUB_Handle->port_state = HUB_Handle->hub_intr_buf[0];
-				printf("port_state:0x%02x\r\n", HUB_Handle->port_state);
-				HUB_Handle->ctl_state = HUB_REQ_ENUM_PORT;
-			}
-			else if(USBH_URB_STALL == tmp_state)
-			{
-				// Issue Clear Feature on interrupt IN endpoint
-				if((USBH_ClrFeature(phost, HUB_Handle->CommItf.NotifEp)) == USBH_OK)
-				{
-					// Change state to issue next IN token
-					HUB_Handle->ctl_state = HUB_REQ_SCAN_PORT;
-				}
 			}
 			else
 			{
+				osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
 			}
+
+			break;*/
+
+		case HUB_REQ_SCAN_PORT_WAIT:
+			
+			tmp_state = USBH_LL_GetURBState(phost, HUB_Handle->CommItf.NotifPipe);
+			if(USBH_URB_DONE == tmp_state)
+			{
+				HUB_Handle->port_state = HUB_Handle->hub_intr_buf[0];
+				printf("chnum %d port_state:0x%02x\r\n", HUB_Handle->CommItf.NotifPipe, HUB_Handle->port_state);
+				HUB_Handle->ctl_state = HUB_REQ_ENUM_PORT;
+				osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
+			}
+			else if(USBH_URB_STALL == tmp_state)
+			{
+				HUB_Handle->ctl_state = HUB_REQ_CLR_FEATURE;
+				osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
+			}
+			else if(USBH_URB_NOTREADY == tmp_state)
+			{
+				HUB_Handle->ctl_state = HUB_REQ_SCAN_PORT;
+			}
+			else
+			{
+				osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
+			}
+
+			//osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
+			
 			break;
+
+		case HUB_REQ_CLR_FEATURE:
+			// Issue Clear Feature on interrupt IN endpoint
+			if((USBH_ClrFeature(phost, HUB_Handle->CommItf.NotifEp)) == USBH_OK)
+			{
+				// Change state to issue next IN token
+				HUB_Handle->ctl_state = HUB_REQ_SCAN_PORT;				
+			}
+			else
+			{
+				osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
+			}
 
 		case HUB_REQ_ENUM_PORT:
 		
@@ -711,13 +732,19 @@ static USBH_StatusTypeDef USBH_HUB_Process (USBH_HandleTypeDef *phost)
 											//	tmp->Control.pipe_in, tmp->Control.pipe_out,
 											//	tmp->Pipes[tmp->Control.pipe_in],
 											//	tmp->Pipes[tmp->Control.pipe_out]); 										
-											
-											while(tmp->gState != HOST_CLASS)
+
+											i = 0;
+											while(tmp->gState != HOST_CLASS && i < 5000)
 											{
 												__IO USBH_StatusTypeDef ret = USBH_Process(tmp);
 		
 												if(HOST_ENUMERATION == tmp->gState && USBH_FAIL == ret)
 													goto RESET_PORT;
+
+												if(HOST_ABORT_STATE == tmp->gState)
+													break;
+
+												++i;
 											}
 		
 											phost->children[port - 1] = tmp;
@@ -792,13 +819,15 @@ RESET_PORT:
 				
 			}
 			HUB_Handle->ctl_state = HUB_REQ_SCAN_PORT;
+
+			osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
 			break;
 
 		default:
 			break;
 	}
 	
-	osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
+	//osMessagePut(phost->os_event, USBH_PORT_EVENT, 0);
 	
 	//__PRINT_LOG__(__CRITICAL_LEVEL__, "port:%d tmp_port_state:%x!\r\n", port, tmp_port_state); 
 	/*if(USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe) == USBH_OK)
@@ -825,8 +854,16 @@ static USBH_StatusTypeDef USBH_HUB_SOFProcess (USBH_HandleTypeDef *phost)
 	if(NULL == HUB_Handle)
 		return USBH_OK;
 
-    ++(HUB_Handle->sof_num);
-	//printf("sof:%d\r\n", HUB_Handle->sof_num);
+	++(HUB_Handle->sof_num);
+
+	if((HUB_Handle->sof_num) >= HUB_Handle->CommItf.poll &&
+		USBH_InterruptReceiveData(phost, HUB_Handle->hub_intr_buf, HUB_Handle->CommItf.NotifEpSize, HUB_Handle->CommItf.NotifPipe) == USBH_OK)
+	{
+		//printf("chnum %d sof:%d\r\n", HUB_Handle->CommItf.NotifPipe, HUB_Handle->sof_num);
+		HUB_Handle->sof_num = 0;
+		if(HUB_REQ_SCAN_PORT == HUB_Handle->ctl_state)
+		HUB_Handle->ctl_state = HUB_REQ_SCAN_PORT_WAIT;
+	}
 
 	/*switch (HUB_Handle->ctl_state)
 	{
