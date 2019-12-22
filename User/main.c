@@ -322,7 +322,7 @@ void my_lwip_init_done(void * arg)
 #define DHCP_LINK_DOWN             (uint8_t) 5
 
 
-#define MAX_DHCP_TRIES  4
+#define MAX_DHCP_TRIES  16
 __IO uint8_t DHCP_state = DHCP_OFF;
 
 /**
@@ -391,7 +391,7 @@ void DHCP_thread(void const * argument)
           }
           else
           {
-            __PRINT_LOG__(__CRITICAL_LEVEL__, "DHCP_GETTING!\r\n");
+            __PRINT_LOG__(__CRITICAL_LEVEL__, "DHCP_GETTING(%d)!\r\n", dhcp->state);
           }
         }
       }
