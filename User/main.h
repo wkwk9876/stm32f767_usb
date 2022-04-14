@@ -43,6 +43,8 @@
 #include "usbh_msc.h"
 #include "usbh_ch340.h"
 #include "usbh_hub.h"
+#include "usbh_aoa.h"
+
 #include "systemlog.h"
 #include "systemDelay.h"
 

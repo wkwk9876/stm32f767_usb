@@ -7,8 +7,8 @@
   */ 
 
 /* Define to prevent recursive  ----------------------------------------------*/
-#ifndef __USBH_TEMPLATE_H
-#define __USBH_TEMPLATE_H
+#ifndef __USBH_HUB_H
+#define __USBH_HUB_H
 
 #ifdef __cplusplus
  extern "C" {

@@ -1,9 +1,36 @@
----- DHCP_STATE_OFF Matches (8 in 2 files) ----
-dhcp_coarse_tmr in dhcp.c (I:\git\Middle\LwIP\src\core\ipv4) :     if ((dhcp != NULL) && (dhcp->state != DHCP_STATE_OFF)) {
-dhcp_set_struct in dhcp.c (I:\git\Middle\LwIP\src\core\ipv4) :   /* dhcp_set_state(&dhcp, DHCP_STATE_OFF); */
-dhcp_start in dhcp.c (I:\git\Middle\LwIP\src\core\ipv4) :   /* dhcp_set_state(&dhcp, DHCP_STATE_OFF); */
-dhcp_network_changed in dhcp.c (I:\git\Middle\LwIP\src\core\ipv4) :   case DHCP_STATE_OFF:
-dhcp_release in dhcp.c (I:\git\Middle\LwIP\src\core\ipv4) :   dhcp_set_state(dhcp, DHCP_STATE_OFF);
-dhcp_release in dhcp.c (I:\git\Middle\LwIP\src\core\ipv4) :     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_release: RELEASED, DHCP_STATE_OFF\n"));
-dhcp_stop in dhcp.c (I:\git\Middle\LwIP\src\core\ipv4) :     dhcp_set_state(dhcp, DHCP_STATE_OFF);
-dhcp.h (I:\git\Middle\LwIP\src\include\lwip\prot) line 102 :   DHCP_STATE_OFF             = 0,
+---- basepri Matches (35 in 9 files) ----
+__get_BASEPRI in cmsis_armcc.h (Core) :   register uint32_t __regBasePri         __ASM("basepri");
+__set_BASEPRI in cmsis_armcc.h (Core) :   register uint32_t __regBasePri         __ASM("basepri");
+__set_BASEPRI_MAX in cmsis_armcc.h (Core) :   register uint32_t __regBasePriMax      __ASM("basepri_max");
+port.c (FreeRTOS\portable\RVDS\ARM_CM3) line 219 : 	msr	basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM3) line 393 : 	msr basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM3) line 398 : 	msr basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM4F) line 248 : 	msr	basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM4F) line 466 : 	msr basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM4F) line 471 : 	msr basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM4_MPU) line 292 : 	msr	basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM4_MPU) line 481 : 	msr basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM4_MPU) line 486 : 	msr basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM7\r0p1) line 242 : 	msr	basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM7\r0p1) line 451 : 	msr basepri, r0
+port.c (FreeRTOS\portable\RVDS\ARM_CM7\r0p1) line 457 : 	msr basepri, r0
+vPortSetBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM3) : 		msr basepri, ulBASEPRI
+vPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM3) : 		msr basepri, ulNewBASEPRI
+vPortClearBASEPRIFromISR in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM3) : 		msr basepri, #0
+ulPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM3) : 		mrs ulReturn, basepri
+ulPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM3) : 		msr basepri, ulNewBASEPRI
+vPortSetBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4F) : 		msr basepri, ulBASEPRI
+vPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4F) : 		msr basepri, ulNewBASEPRI
+vPortClearBASEPRIFromISR in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4F) : 		msr basepri, #0
+ulPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4F) : 		mrs ulReturn, basepri
+ulPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4F) : 		msr basepri, ulNewBASEPRI
+vPortSetBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4_MPU) : 		msr basepri, ulBASEPRI
+vPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4_MPU) : 		msr basepri, ulNewBASEPRI
+vPortClearBASEPRIFromISR in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4_MPU) : 		msr basepri, #0
+ulPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4_MPU) : 		mrs ulReturn, basepri
+ulPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM4_MPU) : 		msr basepri, ulNewBASEPRI
+vPortSetBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM7\r0p1) : 		msr basepri, ulBASEPRI
+vPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM7\r0p1) : 		msr basepri, ulNewBASEPRI
+vPortClearBASEPRIFromISR in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM7\r0p1) : 		msr basepri, #0
+ulPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM7\r0p1) : 		mrs ulReturn, basepri
+ulPortRaiseBASEPRI in portmacro.h (FreeRTOS\portable\RVDS\ARM_CM7\r0p1) : 		msr basepri, ulNewBASEPRI

@@ -335,7 +335,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F767xx</Define>
               <Undefine></Undefine>
-              <IncludePath>..\Core;..\Driver\Inc;..\Library\myLib;..\Middle\STM32_USB_Host_Library\Core\Inc;..\Middle\STM32_USB_Host_Library\Class\MTP\Inc;..\User;..\FreeRTOS\portable\RVDS\ARM_CM7\r0p1;..\FreeRTOS\include;..\Middle\STM32_USB_Host_Library\Class\MSC\Inc;..\FreeRTOS\CMSIS_RTOS;..\Middle\FatFs\src;..\Middle\FatFs\src\drivers;..\Hardware\SDRAM;..\Hardware\PCF8574;..\Hardware\IIC;..\Middle\STM32_USB_Host_Library\Class\CH340\Inc;..\Middle\STM32_USB_Host_Library\Class\HUB\Inc;..\Middle\LwIP\src\include;..\Middle\LwIP\system</IncludePath>
+              <IncludePath>..\Core;..\Driver\Inc;..\Library\myLib;..\Middle\STM32_USB_Host_Library\Core\Inc;..\Middle\STM32_USB_Host_Library\Class\MTP\Inc;..\User;..\FreeRTOS\portable\RVDS\ARM_CM7\r0p1;..\FreeRTOS\include;..\Middle\STM32_USB_Host_Library\Class\MSC\Inc;..\FreeRTOS\CMSIS_RTOS;..\Middle\FatFs\src;..\Middle\FatFs\src\drivers;..\Hardware\SDRAM;..\Hardware\PCF8574;..\Hardware\IIC;..\Middle\STM32_USB_Host_Library\Class\CH340\Inc;..\Middle\STM32_USB_Host_Library\Class\HUB\Inc;..\Middle\LwIP\src\include;..\Middle\LwIP\system;..\Middle\STM32_USB_Host_Library\Class\AOA\Inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -958,6 +958,16 @@
               <FileName>usbh_diskio_dma.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Middle\FatFs\src\drivers\usbh_diskio_dma.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Middle/USBH/Class/AOA</GroupName>
+          <Files>
+            <File>
+              <FileName>usbh_aoa.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Middle\STM32_USB_Host_Library\Class\AOA\Src\usbh_aoa.c</FilePath>
             </File>
           </Files>
         </Group>

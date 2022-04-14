@@ -617,6 +617,39 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
       {
         phost->gState  = HOST_ABORT_STATE;
         USBH_UsrLog ("No registered class for this device(%d).", phost->device.CfgDesc.Itf_Desc[0].bInterfaceClass);
+#if 1
+        USBH_UsrLog ("try aoa for this device(%d).", phost->device.CfgDesc.Itf_Desc[0].bInterfaceClass);
+        for (idx = 0; idx < USBH_MAX_NUM_SUPPORTED_CLASS ; idx ++)
+        {
+          //__PRINT_LOG__(__CRITICAL_LEVEL__, "%d 0x%x 0x%x\r\n", idx, phost->pClass[idx]->ClassCode, phost->device.CfgDesc.Itf_Desc[0].bInterfaceClass);
+          if(phost->pClass[idx]->ClassCode == 0xff)
+          {
+            phost->pActiveClass = phost->pClass[idx];
+          }
+        }
+
+        if(phost->pActiveClass != NULL)
+        {
+          if(phost->pActiveClass->Init(phost)== USBH_OK)
+          {
+            phost->gState  = HOST_CLASS_REQUEST; 
+            USBH_UsrLog ("%s class started.", phost->pActiveClass->Name);
+
+            /* Inform user that a class has been activated */
+            phost->pUser(phost, HOST_USER_CLASS_SELECTED);   
+          }
+          else
+          {
+            phost->pActiveClass = NULL;
+            phost->gState  = HOST_ABORT_STATE;
+            USBH_UsrLog ("Device not supporting %s class.", phost->pActiveClass->Name);
+          }
+        }
+        else
+        {
+          USBH_UsrLog ("try aoa not register!");
+        }
+#endif
       }
     }
     

@@ -65,14 +65,14 @@ static int get_activeclass_app(USBH_HandleTypeDef * phost)
 {
 	int i;
 
-	for(i = 0; i < sizeof(AppClass) / sizeof(AppClass[0]); ++i)
+	/*for(i = 0; i < sizeof(AppClass) / sizeof(AppClass[0]); ++i)
 	{
 		if(AppClass[i]->ClassCode == phost->pActiveClass->ClassCode)
 		{
 			phost->app_class = AppClass[i];
 			return 0;
 		}
-	}
+	}*/
 	return -1;
 }
 
@@ -169,6 +169,7 @@ int init_usb_host(USBH_HandleTypeDef * phost)
 	ret = USBH_RegisterClass(phost, USBH_MSC_CLASS);
 	ret = USBH_RegisterClass(phost, USBH_CH340_CLASS);
 	ret = USBH_RegisterClass(phost, USBH_HUB_CLASS);
+	ret = USBH_RegisterClass(phost, USBH_AOA_CLASS);
 	__PRINT_LOG__(__CRITICAL_LEVEL__, "USBH_RegisterClass complete\r\n");
 
 	/* Start Host Process */
@@ -602,7 +603,7 @@ int main()
     SystemClock_Config(25, 432, 2, 9);
     
     delay_init(216);       
-    uart_init(921600);//(115200);
+    uart_init(115200);
     SDRAM_Init();
     PCF8574_Init();
     
